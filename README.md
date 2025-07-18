@@ -1,237 +1,336 @@
-# Library Management System - Microservices Solution
+# 📚 Library Management System - Microservices Architecture
+- Working with Claude prompt
+[![Build Status](https://github.com/navinprabhu/claude_libraryApp/workflows/CI/badge.svg)](https://github.com/navinprabhu/claude_libraryApp/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com/)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-blue.svg)](https://www.docker.com/)
 
-A scalable microservices-based Library Management System built with .NET 8, following Domain-Driven Design (DDD) and microservices architecture patterns.
+A modern, cloud-ready Library Management System built with **microservices architecture** using .NET 8, featuring independent services for authentication, book management, and member operations.
 
-## 🏗️ Solution Structure
+## 🏗️ System Architecture
 
-```
-LibraryApp/
-├── LibraryApp.sln                    # Main solution file
-├── LibraryApp.Shared.Models/         # Shared DTOs, Enums, and Models
-├── LibraryApp.Shared.Infrastructure/ # Common infrastructure components
-├── LibraryApp.Shared.Events/         # Event models for service communication
-├── setup-local-dev.ps1              # Development environment setup script
-├── build-and-run.ps1                # Build and run script with Docker Compose
-└── README.md                         # This file
-```
+![Library Management System Architecture](library_architecture_diagram.svg)
 
-## 📦 Shared Libraries
+## 🌟 Features
 
-### LibraryApp.Shared.Models
-Contains shared data models, DTOs, and enums used across all microservices:
+### 🔐 **Authentication Service**
+- JWT token-based authentication with OAuth 2.0
+- Role-based access control (Admin, Member)
+- Token validation and refresh mechanisms
+- Secure password hashing with BCrypt
 
-- **DTOs**: BookDto, CreateBookDto, UpdateBookDto, MemberDto, CreateMemberDto, BorrowingRecordDto, BorrowRequestDto
-- **Enums**: BookStatus (Available, Borrowed)
-- **Common Classes**: ApiResponse<T>, PagedResult<T>
+### 📖 **Book Management Service**
+- Complete CRUD operations for books
+- Book borrowing and return workflows
+- ISBN validation and cataloging
+- Borrowing history and audit trails
 
-### LibraryApp.Shared.Infrastructure
-Provides common infrastructure components and utilities:
+### 👥 **Member Management Service**
+- Member registration and profile management
+- Member status tracking (Active, Suspended, Inactive)
+- Borrowing history aggregation
+- Cross-service data synchronization
 
-- **Interfaces**: IRepository<T>, IJwtTokenService
-- **Base Classes**: BaseRepository<T>
-- **Middleware**: CorrelationIdMiddleware, RequestLoggingMiddleware
-- **Extensions**: ServiceCollectionExtensions, ApplicationBuilderExtensions
-- **Configuration**: DatabaseConfiguration helpers
-
-### LibraryApp.Shared.Events
-Event models for inter-service communication:
-
-- **Book Events**: BookCreatedEvent, BookUpdatedEvent, BookDeletedEvent
-- **Member Events**: MemberRegisteredEvent, MemberUpdatedEvent, MemberDeactivatedEvent
-- **Borrowing Events**: BookBorrowedEvent, BookReturnedEvent, BookOverdueEvent
+### 🌐 **API Gateway**
+- Single entry point with Ocelot
+- Request routing and load balancing
+- Rate limiting and throttling
+- CORS configuration and security policies
 
 ## 🛠️ Technology Stack
 
-- **.NET 8**: Main framework
-- **Entity Framework Core**: Data access layer
-- **SQL Server**: Primary database
-- **Docker**: Containerization
-- **Redis**: Caching (optional)
-- **RabbitMQ**: Message queuing (optional)
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Framework** | .NET 8.0 | Core application framework |
+| **Database** | Entity Framework Core | Data persistence layer |
+| **Authentication** | JWT Bearer Tokens | Secure API access |
+| **API Gateway** | Ocelot | Service orchestration |
+| **Containerization** | Docker & Docker Compose | Local development & deployment |
+| **Logging** | Serilog | Structured logging |
+| **Testing** | xUnit + Moq | Unit and integration testing |
+| **Communication** | HTTP Client + Polly | Inter-service communication |
+| **Documentation** | Swagger/OpenAPI | API documentation |
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- .NET 8 SDK
-- Docker Desktop
-- Git
-- PowerShell (for scripts)
+- **Windows 10/11** (for local development)
+- **Docker Desktop** for Windows
+- **.NET 8 SDK**
+- **Git** for Windows
+- **Visual Studio 2022** or **VS Code**
 
-### Quick Setup
+### 🏃‍♂️ Running Locally
 
-1. **Clone the repository**:
+1. **Clone the repository**
    ```bash
    git clone https://github.com/navinprabhu/claude_libraryApp.git
    cd claude_libraryApp
    ```
 
-2. **Run the setup script**:
+2. **Setup local development environment**
    ```powershell
-   .\setup-local-dev.ps1
+   .\scripts\setup-local-dev.ps1
    ```
 
-3. **Build and run services**:
+3. **Build and run all services**
    ```powershell
-   .\build-and-run.ps1 -DetachedMode
+   .\scripts\build-and-run.ps1
    ```
 
-### Manual Setup
+4. **Access the services**
+   - **API Gateway**: http://localhost:5000
+   - **Swagger UI**: http://localhost:5000/swagger
+   - **Auth Service**: http://localhost:5001
+   - **Book Service**: http://localhost:5002
+   - **Member Service**: http://localhost:5003
 
-1. **Restore packages**:
-   ```bash
-   dotnet restore
-   ```
+### 🐳 Docker Development
 
-2. **Build solution**:
-   ```bash
-   dotnet build
-   ```
-
-3. **Run tests**:
-   ```bash
-   dotnet test
-   ```
-
-## 📋 Development Scripts
-
-### setup-local-dev.ps1
-Sets up the local development environment:
-- Checks for required tools (.NET, Git, Docker)
-- Clones repository (optional)
-- Creates environment configuration file
-- Restores NuGet packages
-- Builds the solution
-
-**Usage**:
 ```powershell
-# Full setup
-.\setup-local-dev.ps1
+# Start all services with Docker Compose
+docker-compose up -d
 
-# Skip Docker installation check
-.\setup-local-dev.ps1 -SkipDockerInstall
+# View logs
+docker-compose logs -f
 
-# Skip repository clone
-.\setup-local-dev.ps1 -SkipRepoClone
+# Stop all services
+docker-compose down
 ```
 
-### build-and-run.ps1
-Builds and runs the solution with Docker Compose:
-- Builds all projects
-- Runs tests
-- Starts infrastructure services (SQL Server, Redis, RabbitMQ)
-- Creates Docker Compose configuration
+## 📁 Project Structure
 
-**Usage**:
-```powershell
-# Build and run in detached mode
-.\build-and-run.ps1 -DetachedMode
-
-# Skip build, just run
-.\build-and-run.ps1 -NoBuild
-
-# Clean build and run
-.\build-and-run.ps1 -CleanBuild
-
-# Show logs
-.\build-and-run.ps1 -DetachedMode -ShowLogs
+```
+claude_libraryApp/
+├── 📁 src/
+│   ├── 📁 Services/
+│   │   ├── 🔐 LibraryApp.AuthService/        # Authentication microservice
+│   │   ├── 📚 LibraryApp.BookService/        # Book management microservice
+│   │   ├── 👥 LibraryApp.MemberService/      # Member management microservice
+│   │   └── 🌐 LibraryApp.ApiGateway/         # API Gateway with Ocelot
+│   ├── 📁 Shared/
+│   │   ├── 📄 LibraryApp.Shared.Models/      # Common DTOs and models
+│   │   ├── 🛠️ LibraryApp.Shared.Infrastructure/ # Common utilities
+│   │   └── 📡 LibraryApp.Shared.Events/      # Event models
+│   └── 📁 Tests/
+│       ├── 🧪 LibraryApp.AuthService.Tests/
+│       ├── 🧪 LibraryApp.BookService.Tests/
+│       ├── 🧪 LibraryApp.MemberService.Tests/
+│       └── 🧪 LibraryApp.IntegrationTests/
+├── 📁 docker/
+│   ├── 🐳 docker-compose.yml               # Multi-service orchestration
+│   ├── 🐳 docker-compose.override.yml      # Development overrides
+│   └── 📁 Dockerfiles/                     # Individual service Dockerfiles
+├── 📁 scripts/
+│   ├── ⚡ setup-local-dev.ps1             # Environment setup
+│   ├── 🔧 build-and-run.ps1               # Build and run all services
+│   └── 🧹 clean.ps1                       # Cleanup containers and volumes
+├── 📁 docs/
+│   ├── 📊 architecture-diagram.svg         # System architecture diagram
+│   ├── 📋 api-documentation/               # API specifications
+│   └── 📖 deployment-guides/               # Deployment instructions
+├── 📁 .github/
+│   └── 📁 workflows/
+│       ├── 🔄 ci.yml                       # Continuous Integration
+│       └── 🚀 cd.yml                       # Continuous Deployment
+└── 📄 LibraryApp.sln                       # Solution file
 ```
 
-## 🏛️ Architecture Patterns
+## 🔧 Service Endpoints
 
-### Microservices Architecture
-- **Book Service**: Manages book catalog and inventory
-- **Member Service**: Handles member registration and management
-- **Borrowing Service**: Manages book borrowing and returns
-
-### Shared Kernel Pattern
-- Common models, interfaces, and infrastructure in shared libraries
-- Consistent data models across services
-- Reusable middleware and extensions
-
-### Repository Pattern
-- Generic repository interface and base implementation
-- Consistent data access patterns
-- Testable and mockable data layer
-
-### Event-Driven Communication
-- Domain events for service communication
-- Eventual consistency between services
-- Decoupled service interactions
-
-## 🔧 Configuration
-
-### Database Connections
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=LibraryManagementDB;Trusted_Connection=true;MultipleActiveResultSets=true",
-    "BooksDatabase": "Server=(localdb)\\mssqllocaldb;Database=LibraryBooks;Trusted_Connection=true;MultipleActiveResultSets=true",
-    "MembersDatabase": "Server=(localdb)\\mssqllocaldb;Database=LibraryMembers;Trusted_Connection=true;MultipleActiveResultSets=true",
-    "BorrowingDatabase": "Server=(localdb)\\mssqllocaldb;Database=LibraryBorrowing;Trusted_Connection=true;MultipleActiveResultSets=true"
-  }
-}
+### 🔐 Authentication Service (Port 5001)
+```http
+POST   /api/auth/login          # User login
+POST   /api/auth/validate       # Token validation
+POST   /api/auth/refresh        # Refresh token
+GET    /api/auth/userinfo       # Get user information
 ```
 
-### Environment Variables
-See `.env.local` file created by the setup script for all available environment variables.
+### 📚 Book Service (Port 5002)
+```http
+GET    /api/books               # Get all books
+GET    /api/books/{id}          # Get book by ID
+POST   /api/books               # Create new book [Admin]
+PUT    /api/books/{id}          # Update book [Admin]
+DELETE /api/books/{id}          # Delete book [Admin]
+POST   /api/books/{id}/borrow   # Borrow book
+POST   /api/books/{id}/return   # Return book
+GET    /api/books/{id}/history  # Get borrowing history
+```
+
+### 👥 Member Service (Port 5003)
+```http
+GET    /api/members             # Get all members [Admin]
+GET    /api/members/{id}        # Get member by ID
+POST   /api/members             # Register new member
+PUT    /api/members/{id}        # Update member profile
+GET    /api/members/{id}/borrowed-books    # Get borrowed books
+GET    /api/members/{id}/history           # Get borrowing history
+```
 
 ## 🧪 Testing
 
-Run all tests:
-```bash
+### Run Unit Tests
+```powershell
+# Run all tests
 dotnet test
-```
 
-Run tests with coverage:
-```bash
+# Run with coverage
 dotnet test --collect:"XPlat Code Coverage"
+
+# Run specific service tests
+dotnet test src/Tests/LibraryApp.BookService.Tests/
 ```
 
-## 📝 Next Steps
+### Integration Testing
+```powershell
+# Run integration tests with TestContainers
+dotnet test src/Tests/LibraryApp.IntegrationTests/
+```
 
-1. **Implement Microservices**:
-   - Create BookService Web API
-   - Create MemberService Web API
-   - Create BorrowingService Web API
+## 📊 Monitoring & Observability
 
-2. **Add API Gateway**:
-   - Implement Ocelot or YARP gateway
-   - Configure routing and load balancing
+### Health Checks
+- **Individual Services**: `http://localhost:{port}/health`
+- **Aggregated**: `http://localhost:5000/health`
 
-3. **Implement Authentication**:
-   - Add JWT token service implementation
-   - Configure OAuth/OpenID Connect
+### Structured Logging
+- **Console Output**: Development environment
+- **File Logging**: `logs/` directory
+- **Correlation IDs**: Request tracing across services
 
-4. **Add Service Discovery**:
-   - Implement Consul or similar service discovery
-   - Configure health checks
+### Metrics (Future Enhancement)
+- Application Performance Monitoring (APM)
+- Custom business metrics
+- Performance counters
 
-5. **Add Monitoring**:
-   - Implement logging with Serilog
-   - Add metrics with Application Insights
-   - Configure distributed tracing
+## 🔒 Security Features
+
+- **JWT Authentication**: Bearer token-based security
+- **Role-Based Access**: Admin and Member roles
+- **Input Validation**: Data annotation validation
+- **HTTPS Enforcement**: Production-ready security
+- **CORS Configuration**: Cross-origin request handling
+- **Rate Limiting**: API throttling and abuse prevention
+
+## 🌐 API Documentation
+
+Interactive API documentation is available via Swagger UI:
+- **Gateway Swagger**: http://localhost:5000/swagger
+- **Individual Services**: Each service exposes its own Swagger endpoint
+
+## 🔄 CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+- **Continuous Integration** (`.github/workflows/ci.yml`)
+  - Build all microservices
+  - Run unit and integration tests
+  - Build and test Docker containers
+  - Code coverage reporting
+
+- **Continuous Deployment** (`.github/workflows/cd.yml`)
+  - Build production images
+  - Deploy to staging environment
+  - Run smoke tests
+  - Deploy to production (manual approval)
+
+## 🚀 Deployment
+
+### Local Development
+```powershell
+docker-compose up -d
+```
+
+### Cloud Deployment
+Supports deployment to major cloud providers:
+- **Azure Container Instances**
+- **AWS ECS/Fargate**
+- **Google Cloud Run**
+- **Kubernetes** (any provider)
+
+See [deployment guides](docs/deployment-guides/) for detailed instructions.
 
 ## 🤝 Contributing
 
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Development Workflow
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Standards
+- Follow [Microsoft C# Coding Conventions](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/inside-a-program/coding-conventions)
+- Write unit tests for new functionality
+- Update documentation as needed
+- Ensure all CI checks pass
+
+## 📋 API Examples
+
+### Authentication
+```bash
+# Login to get JWT token
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "password"}'
+
+# Response
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiration": "2024-01-01T12:00:00Z",
+  "refreshToken": "..."
+}
+```
+
+### Create a Book (Admin Only)
+```bash
+curl -X POST http://localhost:5000/api/books \
+  -H "Authorization: Bearer {your-jwt-token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "The Great Gatsby",
+    "author": "F. Scott Fitzgerald",
+    "isbn": "9780743273565"
+  }'
+```
+
+### Borrow a Book
+```bash
+curl -X POST http://localhost:5000/api/books/1/borrow \
+  -H "Authorization: Bearer {your-jwt-token}" \
+  -H "Content-Type: application/json" \
+  -d '{"memberId": 1}'
+```
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🛟 Support
+## 👨‍💻 Author
 
-For questions and support:
-- Create an issue in the GitHub repository
-- Review the troubleshooting section in the documentation
-- Check the setup scripts for common configuration issues
+**Navin Prabhu**
+- GitHub: [@navinprabhu](https://github.com/navinprabhu)
+- Project: [claude_libraryApp](https://github.com/navinprabhu/claude_libraryApp)
+
+## 🙏 Acknowledgments
+
+- Built with guidance from Claude AI
+- Inspired by modern microservices patterns
+- Following .NET and Docker best practices
+
+## 📞 Support
+
+For support and questions:
+- 🐛 **Bug Reports**: [Create an Issue](https://github.com/navinprabhu/claude_libraryApp/issues)
+- 💡 **Feature Requests**: [Discussion Board](https://github.com/navinprabhu/claude_libraryApp/discussions)
+- 📧 **Contact**: Open an issue for general questions
 
 ---
 
-**Happy Coding! 🚀**
+⭐ **Star this repository** if you find it helpful!
+
+📚 **Happy coding and happy reading!** 📚

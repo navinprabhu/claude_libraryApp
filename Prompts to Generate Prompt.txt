@@ -1,0 +1,8 @@
+I have attached requirement for a "The Library Management System API" that I want to build in C# & dotnet core. Please help me generate the accurate prompts that I can provide to claude code. Note this system will be based on microservice architecture and will use simple Oatuh JWT tokens for authentication. Also recommend how to break the prompts for Claude code, so that I can build the project iteratively so that claude does not hallucinate
+
+
+
+Are there any assumptions you are making in above recommendation.
+
+
+I want, true microservices from the start but I will be developing locally on a windows virtual machine. Once I have tested everything works I will be deploying the application to cloud. Also want this project to eventually be a part of github repo @"navinprabhu/cluade_libraryApp" Please modify recommendation strategy

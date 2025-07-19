@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryApp.AuthService", "L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryApp.BookService", "LibraryApp.BookService\LibraryApp.BookService.csproj", "{BD8DC477-BC2E-415C-8B2A-F55BB68668A8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryApp.MemberService", "LibraryApp.MemberService\LibraryApp.MemberService.csproj", "{C560301D-DB4C-420C-9D9D-50EDB5F5C161}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{BD8DC477-BC2E-415C-8B2A-F55BB68668A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD8DC477-BC2E-415C-8B2A-F55BB68668A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD8DC477-BC2E-415C-8B2A-F55BB68668A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C560301D-DB4C-420C-9D9D-50EDB5F5C161}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C560301D-DB4C-420C-9D9D-50EDB5F5C161}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C560301D-DB4C-420C-9D9D-50EDB5F5C161}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C560301D-DB4C-420C-9D9D-50EDB5F5C161}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

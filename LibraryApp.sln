@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryApp.Shared.Infrastru
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryApp.Shared.Events", "LibraryApp.Shared.Events\LibraryApp.Shared.Events.csproj", "{CEDBE224-B7EE-4B14-A4A6-6CE8D48E0152}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryApp.Tests", "LibraryApp.Tests\LibraryApp.Tests.csproj", "{62D7CC09-0BD3-4E11-B6CB-B02FF210269E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryApp.AuthService", "LibraryApp.AuthService\LibraryApp.AuthService.csproj", "{14A4D925-8FEC-4825-9699-1080A5973304}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +34,13 @@ Global
 		{CEDBE224-B7EE-4B14-A4A6-6CE8D48E0152}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CEDBE224-B7EE-4B14-A4A6-6CE8D48E0152}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CEDBE224-B7EE-4B14-A4A6-6CE8D48E0152}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62D7CC09-0BD3-4E11-B6CB-B02FF210269E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62D7CC09-0BD3-4E11-B6CB-B02FF210269E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62D7CC09-0BD3-4E11-B6CB-B02FF210269E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62D7CC09-0BD3-4E11-B6CB-B02FF210269E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14A4D925-8FEC-4825-9699-1080A5973304}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14A4D925-8FEC-4825-9699-1080A5973304}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14A4D925-8FEC-4825-9699-1080A5973304}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14A4D925-8FEC-4825-9699-1080A5973304}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

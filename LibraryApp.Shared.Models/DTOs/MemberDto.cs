@@ -12,6 +12,9 @@ namespace LibraryApp.Shared.Models.DTOs
         public DateTime JoinDate { get; set; }
         public bool IsActive { get; set; }
         public string MembershipNumber { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string MembershipType { get; set; } = string.Empty;
+        public int MaxBooksAllowed { get; set; }
     }
 
     public class CreateMemberDto

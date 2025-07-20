@@ -14,6 +14,10 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.5.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.12" />
+    <PackageReference Include="Moq" Version="4.20.70" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.12" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +28,7 @@
     <ProjectReference Include="..\LibraryApp.Shared.Models\LibraryApp.Shared.Models.csproj" />
     <ProjectReference Include="..\LibraryApp.Shared.Infrastructure\LibraryApp.Shared.Infrastructure.csproj" />
     <ProjectReference Include="..\LibraryApp.Shared.Events\LibraryApp.Shared.Events.csproj" />
+    <ProjectReference Include="..\LibraryApp.ApiGateway\LibraryApp.ApiGateway.csproj" />
   </ItemGroup>
 
 </Project>

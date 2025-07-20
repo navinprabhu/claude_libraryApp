@@ -28,8 +28,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<IAuthService, LibraryApp.AuthService.Services.AuthService>();
 
-// Add shared infrastructure services
-builder.Services.AddSharedInfrastructure();
+// Note: SharedInfrastructure DI registration removed - each service registers its own repositories
 
 // Add JWT Authentication
 builder.Services.AddAuthentication(options =>

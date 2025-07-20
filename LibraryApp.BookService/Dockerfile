@@ -1,44 +1,94 @@
-# Use the official .NET 8 SDK image to build the app
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+# Base runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 5002
+EXPOSE 40002
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Development stage for hot reload and debugging
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS development
 WORKDIR /app
 
-# Copy the project file and restore dependencies
-COPY LibraryApp.BookService.csproj .
-COPY ../LibraryApp.Shared.Models/LibraryApp.Shared.Models.csproj ../LibraryApp.Shared.Models/
-COPY ../LibraryApp.Shared.Infrastructure/LibraryApp.Shared.Infrastructure.csproj ../LibraryApp.Shared.Infrastructure/
-COPY ../LibraryApp.Shared.Events/LibraryApp.Shared.Events.csproj ../LibraryApp.Shared.Events/
+# Install curl for health checks in development
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-RUN dotnet restore
+# Copy project files for dependency restoration
+COPY ["LibraryApp.BookService/LibraryApp.BookService.csproj", "LibraryApp.BookService/"]
+COPY ["LibraryApp.Shared.Models/LibraryApp.Shared.Models.csproj", "LibraryApp.Shared.Models/"]
+COPY ["LibraryApp.Shared.Infrastructure/LibraryApp.Shared.Infrastructure.csproj", "LibraryApp.Shared.Infrastructure/"]
+COPY ["LibraryApp.Shared.Events/LibraryApp.Shared.Events.csproj", "LibraryApp.Shared.Events/"]
 
-# Copy the entire source code
+# Restore dependencies
+RUN dotnet restore "LibraryApp.BookService/LibraryApp.BookService.csproj"
+
+# Copy source code
 COPY . .
-COPY ../LibraryApp.Shared.Models/ ../LibraryApp.Shared.Models/
-COPY ../LibraryApp.Shared.Infrastructure/ ../LibraryApp.Shared.Infrastructure/
-COPY ../LibraryApp.Shared.Events/ ../LibraryApp.Shared.Events/
+
+# Install dotnet tools for development
+RUN dotnet tool install --global dotnet-ef
+RUN dotnet tool install --global dotnet-watch
+ENV PATH="${PATH}:/root/.dotnet/tools"
+
+# Set working directory to the service
+WORKDIR /app/LibraryApp.BookService
+
+# Development environment variables
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_URLS=http://+:5002
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+
+# Default command for development (can be overridden)
+CMD ["dotnet", "watch", "run", "--urls", "http://+:5002"]
+
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy project files
+COPY ["LibraryApp.BookService/LibraryApp.BookService.csproj", "LibraryApp.BookService/"]
+COPY ["LibraryApp.Shared.Models/LibraryApp.Shared.Models.csproj", "LibraryApp.Shared.Models/"]
+COPY ["LibraryApp.Shared.Infrastructure/LibraryApp.Shared.Infrastructure.csproj", "LibraryApp.Shared.Infrastructure/"]
+COPY ["LibraryApp.Shared.Events/LibraryApp.Shared.Events.csproj", "LibraryApp.Shared.Events/"]
+
+# Restore dependencies
+RUN dotnet restore "LibraryApp.BookService/LibraryApp.BookService.csproj"
+
+# Copy source code
+COPY . .
 
 # Build the application
-RUN dotnet build -c Release -o /app/build
+WORKDIR "/src/LibraryApp.BookService"
+RUN dotnet build "LibraryApp.BookService.csproj" -c Release -o /app/build
 
-# Publish the application
-RUN dotnet publish -c Release -o /app/publish
+# Publish stage
+FROM build AS publish
+RUN dotnet publish "LibraryApp.BookService.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Use the official .NET 8 runtime image for the final stage
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+# Production runtime stage
+FROM base AS production
 WORKDIR /app
 
-# Copy the published application from the build stage
-COPY --from=build /app/publish .
+# Create logs directory
+RUN mkdir -p /app/logs
 
-# Expose the port the app runs on
-EXPOSE 5002
+# Create a non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser && \
+    chown -R appuser:appuser /app
 
-# Set environment variables
+# Copy published application
+COPY --from=publish /app/publish .
+
+# Switch to non-root user
+USER appuser
+
+# Production environment variables
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5002
 
-# Define the entry point for the application
-ENTRYPOINT ["dotnet", "LibraryApp.BookService.dll"]
-
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:5002/health || exit 1
+
+ENTRYPOINT ["dotnet", "LibraryApp.BookService.dll"]

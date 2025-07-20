@@ -8,7 +8,9 @@ namespace LibraryApp.Shared.Infrastructure.Extensions
     {
         public static IServiceCollection AddSharedInfrastructure(this IServiceCollection services)
         {
-            services.AddScoped(typeof(IRepository<>), typeof(BaseRepository<>));
+            // Note: BaseRepository<T> is abstract and should not be registered directly.
+            // Each service should register their own concrete repository implementations.
+            // Example: services.AddScoped<IUserRepository, UserRepository>();
             
             return services;
         }

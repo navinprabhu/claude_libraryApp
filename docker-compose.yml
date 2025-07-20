@@ -1,0 +1,244 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Databases
+  auth-db:
+    image: postgres:15-alpine
+    container_name: libraryapp-auth-db
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME:-AuthDatabase}
+      POSTGRES_USER: ${AUTH_DB_USER:-auth_user}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-auth_password123}
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+      - ./scripts/db-init/auth:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - libraryapp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-auth_user} -d ${AUTH_DB_NAME:-AuthDatabase}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  book-db:
+    image: postgres:15-alpine
+    container_name: libraryapp-book-db
+    environment:
+      POSTGRES_DB: ${BOOK_DB_NAME:-BookDatabase}
+      POSTGRES_USER: ${BOOK_DB_USER:-book_user}
+      POSTGRES_PASSWORD: ${BOOK_DB_PASSWORD:-book_password123}
+    volumes:
+      - book_db_data:/var/lib/postgresql/data
+      - ./scripts/db-init/book:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    networks:
+      - libraryapp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BOOK_DB_USER:-book_user} -d ${BOOK_DB_NAME:-BookDatabase}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  member-db:
+    image: postgres:15-alpine
+    container_name: libraryapp-member-db
+    environment:
+      POSTGRES_DB: ${MEMBER_DB_NAME:-MemberDatabase}
+      POSTGRES_USER: ${MEMBER_DB_USER:-member_user}
+      POSTGRES_PASSWORD: ${MEMBER_DB_PASSWORD:-member_password123}
+    volumes:
+      - member_db_data:/var/lib/postgresql/data
+      - ./scripts/db-init/member:/docker-entrypoint-initdb.d
+    ports:
+      - "5434:5432"
+    networks:
+      - libraryapp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MEMBER_DB_USER:-member_user} -d ${MEMBER_DB_NAME:-MemberDatabase}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: libraryapp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - libraryapp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password123}
+
+  # Authentication Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: LibraryApp.AuthService/Dockerfile
+    container_name: libraryapp-auth-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=http://+:5001
+      - ConnectionStrings__DefaultConnection=Host=auth-db;Port=5432;Database=${AUTH_DB_NAME:-AuthDatabase};Username=${AUTH_DB_USER:-auth_user};Password=${AUTH_DB_PASSWORD:-auth_password123}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-YourSuperSecretKeyThatIsAtLeast32CharactersLong123456789}
+      - JwtSettings__Issuer=${JWT_ISSUER:-LibraryApp.AuthService}
+      - JwtSettings__Audience=${JWT_AUDIENCE:-LibraryApp.ApiClients}
+      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES:-60}
+      - Redis__ConnectionString=redis:6379,password=${REDIS_PASSWORD:-redis_password123}
+    ports:
+      - "5001:5001"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - libraryapp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Book Service
+  book-service:
+    build:
+      context: .
+      dockerfile: LibraryApp.BookService/Dockerfile
+    container_name: libraryapp-book-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=http://+:5002
+      - ConnectionStrings__DefaultConnection=Host=book-db;Port=5432;Database=${BOOK_DB_NAME:-BookDatabase};Username=${BOOK_DB_USER:-book_user};Password=${BOOK_DB_PASSWORD:-book_password123}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-YourSuperSecretKeyThatIsAtLeast32CharactersLong123456789}
+      - JwtSettings__Issuer=${JWT_ISSUER:-LibraryApp.AuthService}
+      - JwtSettings__Audience=${JWT_AUDIENCE:-LibraryApp.ApiClients}
+      - Redis__ConnectionString=redis:6379,password=${REDIS_PASSWORD:-redis_password123}
+      - ServiceUrls__AuthService=http://auth-service:5001
+      - ServiceUrls__MemberService=http://member-service:5003
+    ports:
+      - "5002:5002"
+    depends_on:
+      book-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - libraryapp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Member Service
+  member-service:
+    build:
+      context: .
+      dockerfile: LibraryApp.MemberService/Dockerfile
+    container_name: libraryapp-member-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=http://+:5003
+      - ConnectionStrings__DefaultConnection=Host=member-db;Port=5432;Database=${MEMBER_DB_NAME:-MemberDatabase};Username=${MEMBER_DB_USER:-member_user};Password=${MEMBER_DB_PASSWORD:-member_password123}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-YourSuperSecretKeyThatIsAtLeast32CharactersLong123456789}
+      - JwtSettings__Issuer=${JWT_ISSUER:-LibraryApp.AuthService}
+      - JwtSettings__Audience=${JWT_AUDIENCE:-LibraryApp.ApiClients}
+      - Redis__ConnectionString=redis:6379,password=${REDIS_PASSWORD:-redis_password123}
+      - ServiceUrls__AuthService=http://auth-service:5001
+      - ServiceUrls__BookService=http://book-service:5002
+    ports:
+      - "5003:5003"
+    depends_on:
+      member-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - libraryapp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: LibraryApp.ApiGateway/Dockerfile
+    container_name: libraryapp-api-gateway
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=http://+:5000
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-YourSuperSecretKeyThatIsAtLeast32CharactersLong123456789}
+      - JwtSettings__Issuer=${JWT_ISSUER:-LibraryApp.AuthService}
+      - JwtSettings__Audience=${JWT_AUDIENCE:-LibraryApp.ApiClients}
+      - ServiceUrls__AuthService=http://auth-service:5001
+      - ServiceUrls__BookService=http://book-service:5002
+      - ServiceUrls__MemberService=http://member-service:5003
+      - Redis__ConnectionString=redis:6379,password=${REDIS_PASSWORD:-redis_password123}
+    ports:
+      - "5000:5000"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      book-service:
+        condition: service_healthy
+      member-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - libraryapp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health/gateway", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+# Networks
+networks:
+  libraryapp-network:
+    driver: bridge
+    name: libraryapp-network
+
+# Named volumes for data persistence
+volumes:
+  auth_db_data:
+    name: libraryapp_auth_db_data
+  book_db_data:
+    name: libraryapp_book_db_data
+  member_db_data:
+    name: libraryapp_member_db_data
+  redis_data:
+    name: libraryapp_redis_data

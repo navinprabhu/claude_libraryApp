@@ -1,3 +1,4 @@
+using LibraryApp.Shared.Infrastructure.Interfaces;
 using LibraryApp.Shared.Models.Common;
 using LibraryApp.Shared.Models.DTOs;
 using Polly;
@@ -10,12 +11,17 @@ namespace LibraryApp.MemberService.Services.External
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<BookServiceClient> _logger;
+        private readonly ICorrelationIdService _correlationIdService;
         private readonly JsonSerializerOptions _jsonOptions;
 
-        public BookServiceClient(HttpClient httpClient, ILogger<BookServiceClient> logger)
+        public BookServiceClient(
+            HttpClient httpClient, 
+            ILogger<BookServiceClient> logger,
+            ICorrelationIdService correlationIdService)
         {
             _httpClient = httpClient;
             _logger = logger;
+            _correlationIdService = correlationIdService;
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -25,17 +31,38 @@ namespace LibraryApp.MemberService.Services.External
 
         public async Task<ApiResponse<IEnumerable<BorrowingRecordDto>>> GetMemberBorrowedBooksAsync(int memberId)
         {
+            var correlationId = _correlationIdService.GetCorrelationId() ?? Guid.NewGuid().ToString();
+            
             try
             {
-                _logger.LogInformation("Calling BookService to get borrowed books for member: {MemberId}", memberId);
+                _logger.LogInformation("Calling BookService to get borrowed books for member: {MemberId} with correlation ID: {CorrelationId}", 
+                    memberId, correlationId);
+
+                using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/borrowings/member/{memberId}/current");
+                request.Headers.Add("X-Correlation-ID", correlationId);
                 
-                var response = await _httpClient.GetAsync($"/api/borrowings/member/{memberId}?isReturned=false");
+                var response = await _httpClient.SendAsync(request);
                 
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
-                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<IEnumerable<BorrowingRecordDto>>>(content, _jsonOptions);
-                    return apiResponse ?? ApiResponse<IEnumerable<BorrowingRecordDto>>.ErrorResponse("Invalid response from BookService", 500);
+                    var borrowedBooks = JsonSerializer.Deserialize<IEnumerable<BorrowedBookResponse>>(content, _jsonOptions);
+                    
+                    // Convert to BorrowingRecordDto format
+                    var borrowingRecords = borrowedBooks?.Select(b => new BorrowingRecordDto
+                    {
+                        Id = b.BorrowingId,
+                        BookId = b.BookId,
+                        BookTitle = b.BookTitle,
+                        BookAuthor = b.BookAuthor,
+                        MemberId = memberId,
+                        BorrowedAt = b.BorrowDate,
+                        DueDate = b.DueDate,
+                        IsReturned = false,
+                        ReturnedAt = null
+                    }) ?? Enumerable.Empty<BorrowingRecordDto>();
+
+                    return ApiResponse<IEnumerable<BorrowingRecordDto>>.SuccessResponse(borrowingRecords);
                 }
                 else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
@@ -44,7 +71,8 @@ namespace LibraryApp.MemberService.Services.External
                 }
                 else
                 {
-                    _logger.LogWarning("BookService returned error status: {StatusCode}", response.StatusCode);
+                    _logger.LogWarning("BookService returned error status: {StatusCode} for correlation ID: {CorrelationId}", 
+                        response.StatusCode, correlationId);
                     return ApiResponse<IEnumerable<BorrowingRecordDto>>.ErrorResponse("BookService unavailable", (int)response.StatusCode);
                 }
             }

@@ -1,6 +1,7 @@
 using LibraryApp.BookService.Infrastructure.Authorization;
 using LibraryApp.BookService.Services;
 using LibraryApp.Shared.Models.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -147,6 +148,52 @@ namespace LibraryApp.BookService.Controllers
             var deletedBy = GetCurrentUsername();
             var result = await _bookService.DeleteBookAsync(id, deletedBy);
             return StatusCode(result.StatusCode, result);
+        }
+
+        /// <summary>
+        /// Gets borrowing status for a specific book - used by other services
+        /// </summary>
+        [HttpGet("{id:int}/borrowing-status")]
+        [AllowAnonymous] // Allow inter-service calls without authentication
+        public async Task<IActionResult> GetBorrowingStatus(int id)
+        {
+            try
+            {
+                var book = await _bookService.GetBookByIdAsync(id);
+                if (!book.Success || book.Data == null)
+                {
+                    return NotFound($"Book with ID {id} not found");
+                }
+
+                // Get current borrowings for this book
+                var borrowingService = HttpContext.RequestServices.GetRequiredService<IBorrowingService>();
+                var currentBorrowings = await borrowingService.GetActiveBorrowingsForBookAsync(id);
+
+                var borrowingStatus = new
+                {
+                    BookId = id,
+                    TotalCopies = book.Data.TotalCopies,
+                    AvailableCopies = book.Data.AvailableCopies,
+                    BorrowedCopies = book.Data.TotalCopies - book.Data.AvailableCopies,
+                    IsAvailable = book.Data.AvailableCopies > 0,
+                    CurrentBorrowings = currentBorrowings.Data?.Select(b => new
+                    {
+                        BorrowingId = b.Id,
+                        MemberId = b.MemberId,
+                        MemberEmail = b.MemberEmail,
+                        BorrowDate = b.BorrowedAt,
+                        DueDate = b.DueDate,
+                        IsOverdue = b.DueDate < DateTime.UtcNow && !b.IsReturned
+                    }) ?? Enumerable.Empty<object>()
+                };
+
+                return Ok(borrowingStatus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting borrowing status for book {BookId}", id);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         private string GetCurrentUsername()

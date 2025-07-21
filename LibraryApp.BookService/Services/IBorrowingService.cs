@@ -19,5 +19,6 @@ namespace LibraryApp.BookService.Services
         Task<ApiResponse<IEnumerable<BorrowingRecordDto>>> GetDueSoonAsync(int daysAhead = 3);
         Task<ApiResponse<int>> GetActiveBorrowingCountAsync(int memberId);
         Task<ApiResponse<bool>> CanMemberBorrowAsync(int memberId, int maxBooksPerMember = 5);
+        Task<ApiResponse<IEnumerable<BorrowingRecordDto>>> GetActiveBorrowingsForBookAsync(int bookId);
     }
 }

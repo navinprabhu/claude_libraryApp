@@ -1,11 +1,13 @@
-# 📚 Library Management System - Microservices Architecture
-- Working with Claude prompt
-[![Build Status](https://github.com/navinprabhu/claude_libraryApp/workflows/CI/badge.svg)](https://github.com/navinprabhu/claude_libraryApp/actions)
+# LibraryApp - Microservices Library Management System
+
+[![CI/CD Pipeline](https://github.com/navinprabhu/claude_libraryApp/actions/workflows/ci.yml/badge.svg)](https://github.com/navinprabhu/claude_libraryApp/actions/workflows/ci.yml)
+[![Deployment](https://github.com/navinprabhu/claude_libraryApp/actions/workflows/cd.yml/badge.svg)](https://github.com/navinprabhu/claude_libraryApp/actions/workflows/cd.yml)
+[![Security Scan](https://github.com/navinprabhu/claude_libraryApp/actions/workflows/security.yml/badge.svg)](https://github.com/navinprabhu/claude_libraryApp/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-blue.svg)](https://www.docker.com/)
 
-A modern, cloud-ready Library Management System built with **microservices architecture** using .NET 8, featuring independent services for authentication, book management, and member operations.
+A modern, cloud-native library management system built with .NET 8 microservices architecture, featuring comprehensive CI/CD pipelines, monitoring, and enterprise-grade security.
 
 ## 🏗️ System Architecture
 

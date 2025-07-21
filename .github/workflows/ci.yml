@@ -1,0 +1,466 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # Job to detect changes and set up matrix
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.changes.outputs.services }}
+      tests: ${{ steps.changes.outputs.tests }}
+      shared: ${{ steps.changes.outputs.shared }}
+      any_changed: ${{ steps.changes.outputs.any_changed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: changes
+        run: |
+          # Check for changes in different components
+          auth_changed=false
+          book_changed=false
+          member_changed=false
+          gateway_changed=false
+          shared_changed=false
+          tests_changed=false
+          
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.AuthService/'; then
+            auth_changed=true
+          fi
+          
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.BookService/'; then
+            book_changed=true
+          fi
+          
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.MemberService/'; then
+            member_changed=true
+          fi
+          
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.ApiGateway/'; then
+            gateway_changed=true
+          fi
+          
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.Shared/'; then
+            shared_changed=true
+          fi
+          
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.Tests/'; then
+            tests_changed=true
+          fi
+          
+          # Build services array
+          services="[]"
+          if [ "$auth_changed" = true ] || [ "$shared_changed" = true ]; then
+            services=$(echo $services | jq '. + ["auth"]')
+          fi
+          if [ "$book_changed" = true ] || [ "$shared_changed" = true ]; then
+            services=$(echo $services | jq '. + ["book"]')
+          fi
+          if [ "$member_changed" = true ] || [ "$shared_changed" = true ]; then
+            services=$(echo $services | jq '. + ["member"]')
+          fi
+          if [ "$gateway_changed" = true ] || [ "$shared_changed" = true ]; then
+            services=$(echo $services | jq '. + ["gateway"]')
+          fi
+          
+          # If this is a PR to main or push to main, build all services
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            services='["auth", "book", "member", "gateway"]'
+          fi
+          
+          # If no specific changes detected, build all for safety
+          if [ "$services" = "[]" ]; then
+            services='["auth", "book", "member", "gateway"]'
+          fi
+          
+          echo "services=$services" >> $GITHUB_OUTPUT
+          echo "tests=$tests_changed" >> $GITHUB_OUTPUT
+          echo "shared=$shared_changed" >> $GITHUB_OUTPUT
+          echo "any_changed=true" >> $GITHUB_OUTPUT
+
+  # Build and test .NET applications
+  build-and-test:
+    needs: changes
+    if: needs.changes.outputs.any_changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.changes.outputs.services) }}
+      fail-fast: false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore LibraryApp.sln
+
+      - name: Build solution
+        run: dotnet build LibraryApp.sln --no-restore --configuration Release
+
+      - name: Set service variables
+        id: service-vars
+        run: |
+          case "${{ matrix.service }}" in
+            "auth")
+              echo "project_path=LibraryApp.AuthService" >> $GITHUB_OUTPUT
+              echo "service_name=AuthService" >> $GITHUB_OUTPUT
+              echo "port=5001" >> $GITHUB_OUTPUT
+              ;;
+            "book")
+              echo "project_path=LibraryApp.BookService" >> $GITHUB_OUTPUT
+              echo "service_name=BookService" >> $GITHUB_OUTPUT
+              echo "port=5002" >> $GITHUB_OUTPUT
+              ;;
+            "member")
+              echo "project_path=LibraryApp.MemberService" >> $GITHUB_OUTPUT
+              echo "service_name=MemberService" >> $GITHUB_OUTPUT
+              echo "port=5003" >> $GITHUB_OUTPUT
+              ;;
+            "gateway")
+              echo "project_path=LibraryApp.ApiGateway" >> $GITHUB_OUTPUT
+              echo "service_name=ApiGateway" >> $GITHUB_OUTPUT
+              echo "port=5000" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Run unit tests
+        run: |
+          dotnet test LibraryApp.Tests/LibraryApp.Tests.csproj \
+            --no-build \
+            --configuration Release \
+            --logger trx \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: Generate test report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Test Results (${{ matrix.service }})
+          path: TestResults/*.trx
+          reporter: dotnet-trx
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./TestResults
+          flags: ${{ matrix.service }}
+          name: codecov-${{ matrix.service }}
+
+  # Security scanning
+  security-scan:
+    needs: changes
+    if: needs.changes.outputs.any_changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore LibraryApp.sln
+
+      - name: Run security scan
+        run: |
+          # Install security scanner
+          dotnet tool install --global security-scan
+          
+          # Run security analysis
+          security-scan LibraryApp.sln --export sarif --output security-results.sarif || true
+
+      - name: Upload security scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: security-results.sarif
+
+      - name: Dependency vulnerability scan
+        run: |
+          # Scan for vulnerable dependencies
+          dotnet list package --vulnerable --include-transitive > vulnerability-report.txt || true
+          
+          # Check if vulnerabilities found
+          if grep -q "has the following vulnerable packages" vulnerability-report.txt; then
+            echo "❌ Vulnerable dependencies found!"
+            cat vulnerability-report.txt
+            exit 1
+          else
+            echo "✅ No vulnerable dependencies found"
+          fi
+
+  # Docker build and test
+  docker-build:
+    needs: [changes, build-and-test]
+    if: needs.changes.outputs.any_changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.changes.outputs.services) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.service }}-
+
+      - name: Set service variables
+        id: service-vars
+        run: |
+          case "${{ matrix.service }}" in
+            "auth")
+              echo "dockerfile=LibraryApp.AuthService/Dockerfile" >> $GITHUB_OUTPUT
+              echo "context=." >> $GITHUB_OUTPUT
+              echo "image_name=libraryapp-auth" >> $GITHUB_OUTPUT
+              ;;
+            "book")
+              echo "dockerfile=LibraryApp.BookService/Dockerfile" >> $GITHUB_OUTPUT
+              echo "context=." >> $GITHUB_OUTPUT
+              echo "image_name=libraryapp-book" >> $GITHUB_OUTPUT
+              ;;
+            "member")
+              echo "dockerfile=LibraryApp.MemberService/Dockerfile" >> $GITHUB_OUTPUT
+              echo "context=." >> $GITHUB_OUTPUT
+              echo "image_name=libraryapp-member" >> $GITHUB_OUTPUT
+              ;;
+            "gateway")
+              echo "dockerfile=LibraryApp.ApiGateway/Dockerfile" >> $GITHUB_OUTPUT
+              echo "context=." >> $GITHUB_OUTPUT
+              echo "image_name=libraryapp-gateway" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ steps.service-vars.outputs.context }}
+          file: ${{ steps.service-vars.outputs.dockerfile }}
+          push: false
+          tags: ${{ steps.service-vars.outputs.image_name }}:test
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          outputs: type=docker,dest=/tmp/${{ steps.service-vars.outputs.image_name }}.tar
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Load and test Docker image
+        run: |
+          docker load --input /tmp/${{ steps.service-vars.outputs.image_name }}.tar
+          
+          # Test that the image can start
+          docker run --rm -d --name test-${{ matrix.service }} \
+            -p 8080:8080 \
+            ${{ steps.service-vars.outputs.image_name }}:test
+          
+          # Wait for container to start
+          sleep 10
+          
+          # Basic health check
+          if docker ps | grep test-${{ matrix.service }}; then
+            echo "✅ Container started successfully"
+            docker stop test-${{ matrix.service }}
+          else
+            echo "❌ Container failed to start"
+            docker logs test-${{ matrix.service }} || true
+            exit 1
+          fi
+
+      - name: Scan Docker image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.service-vars.outputs.image_name }}:test
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+
+  # Integration tests
+  integration-tests:
+    needs: [changes, build-and-test]
+    if: needs.changes.outputs.any_changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Start services with Docker Compose
+        run: |
+          # Build and start all services
+          docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+          
+          # Wait for services to be ready
+          echo "Waiting for services to start..."
+          sleep 30
+          
+          # Check service health
+          for service in auth book member gateway; do
+            port=$(case $service in
+              auth) echo 5001 ;;
+              book) echo 5002 ;;
+              member) echo 5003 ;;
+              gateway) echo 5000 ;;
+            esac)
+            
+            echo "Checking $service service on port $port..."
+            for i in {1..10}; do
+              if curl -f http://localhost:$port/health > /dev/null 2>&1; then
+                echo "✅ $service service is healthy"
+                break
+              fi
+              echo "Waiting for $service service... ($i/10)"
+              sleep 5
+            done
+          done
+
+      - name: Run integration tests
+        run: |
+          dotnet test LibraryApp.Tests/LibraryApp.Tests.csproj \
+            --configuration Release \
+            --filter Category=Integration \
+            --logger trx \
+            --results-directory ./IntegrationTestResults
+
+      - name: Upload integration test results
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Integration Test Results
+          path: IntegrationTestResults/*.trx
+          reporter: dotnet-trx
+
+      - name: Collect service logs
+        if: failure()
+        run: |
+          echo "=== Service Logs ==="
+          docker-compose logs
+
+      - name: Stop services
+        if: always()
+        run: docker-compose down -v
+
+  # Code quality checks
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install SonarCloud scanner
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+
+      - name: Build and analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "${{ secrets.SONAR_TOKEN }}" ]; then
+            dotnet sonarscanner begin \
+              /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" \
+              /o:"${{ github.repository_owner }}" \
+              /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+              /d:sonar.host.url="https://sonarcloud.io" \
+              /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+            
+            dotnet build LibraryApp.sln --configuration Release
+            
+            dotnet test LibraryApp.Tests/LibraryApp.Tests.csproj \
+              --configuration Release \
+              --collect:"XPlat Code Coverage" \
+              --results-directory ./CoverageResults \
+              -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+            
+            dotnet sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+          else
+            echo "SonarCloud token not configured, skipping analysis"
+          fi
+
+  # Summary job
+  ci-summary:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan, docker-build, integration-tests, code-quality]
+    if: always()
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "Build and Test: ${{ needs.build-and-test.result }}"
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+          echo "Docker Build: ${{ needs.docker-build.result }}"
+          echo "Integration Tests: ${{ needs.integration-tests.result }}"
+          echo "Code Quality: ${{ needs.code-quality.result }}"
+          
+          if [ "${{ needs.build-and-test.result }}" != "success" ] || \
+             [ "${{ needs.security-scan.result }}" != "success" ] || \
+             [ "${{ needs.docker-build.result }}" != "success" ] || \
+             [ "${{ needs.integration-tests.result }}" != "success" ]; then
+            echo "❌ CI pipeline failed"
+            exit 1
+          else
+            echo "✅ CI pipeline passed"
+          fi

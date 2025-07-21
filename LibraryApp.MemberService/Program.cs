@@ -1,6 +1,7 @@
 using LibraryApp.MemberService.Data;
 using LibraryApp.MemberService.Infrastructure.Extensions;
 using LibraryApp.MemberService.Infrastructure.Middleware;
+using LibraryApp.Shared.Infrastructure.Extensions;
 using Microsoft.OpenApi.Models;
 using Serilog;
 

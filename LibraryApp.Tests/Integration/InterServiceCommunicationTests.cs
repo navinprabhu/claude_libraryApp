@@ -4,6 +4,7 @@ using LibraryApp.MemberService.Controllers;
 using LibraryApp.MemberService.Services;
 using LibraryApp.MemberService.Services.External;
 using LibraryApp.Shared.Infrastructure.Interfaces;
+using LibraryApp.Shared.Infrastructure.Middleware;
 using LibraryApp.Shared.Models.Common;
 using LibraryApp.Shared.Models.DTOs;
 using Microsoft.AspNetCore.Http;

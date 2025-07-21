@@ -4,6 +4,7 @@ using LibraryApp.BookService.Models.Entities;
 using LibraryApp.BookService.Models.Requests;
 using LibraryApp.Shared.Events;
 using LibraryApp.Shared.Infrastructure.Interfaces;
+using LibraryApp.Shared.Infrastructure.Middleware;
 using LibraryApp.Shared.Models.Common;
 using LibraryApp.Shared.Models.DTOs;
 

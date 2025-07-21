@@ -1,0 +1,465 @@
+name: Continuous Deployment
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      services:
+        description: 'Services to deploy (comma-separated: auth,book,member,gateway or "all")'
+        required: true
+        default: 'all'
+
+env:
+  REGISTRY: docker.io
+  DOTNET_VERSION: '8.0.x'
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  # Determine deployment configuration
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.setup.outputs.environment }}
+      services: ${{ steps.setup.outputs.services }}
+      tag: ${{ steps.setup.outputs.tag }}
+      registry_prefix: ${{ steps.setup.outputs.registry_prefix }}
+    steps:
+      - name: Setup deployment parameters
+        id: setup
+        run: |
+          # Determine environment
+          if [ "${{ github.event_name }}" = "release" ]; then
+            environment="production"
+            tag="${{ github.event.release.tag_name }}"
+          else
+            environment="${{ github.event.inputs.environment }}"
+            tag="latest"
+          fi
+          
+          # Determine services to deploy
+          if [ "${{ github.event.inputs.services }}" = "all" ] || [ "${{ github.event_name }}" = "release" ]; then
+            services='["auth", "book", "member", "gateway"]'
+          else
+            # Convert comma-separated list to JSON array
+            services=$(echo '${{ github.event.inputs.services }}' | jq -R -s -c 'split(",") | map(select(length > 0))')
+          fi
+          
+          # Set registry prefix
+          registry_prefix="${{ vars.DOCKER_REGISTRY_PREFIX || 'libraryapp' }}"
+          
+          echo "environment=$environment" >> $GITHUB_OUTPUT
+          echo "services=$services" >> $GITHUB_OUTPUT
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+          echo "registry_prefix=$registry_prefix" >> $GITHUB_OUTPUT
+          
+          echo "Deploying to: $environment"
+          echo "Services: $services"
+          echo "Tag: $tag"
+
+  # Build and push Docker images
+  build-images:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.setup.outputs.services) }}
+        platform: [linux/amd64, linux/arm64]
+      fail-fast: false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set service variables
+        id: service-vars
+        run: |
+          case "${{ matrix.service }}" in
+            "auth")
+              echo "dockerfile=LibraryApp.AuthService/Dockerfile" >> $GITHUB_OUTPUT
+              echo "context=." >> $GITHUB_OUTPUT
+              ;;
+            "book")
+              echo "dockerfile=LibraryApp.BookService/Dockerfile" >> $GITHUB_OUTPUT
+              echo "context=." >> $GITHUB_OUTPUT
+              ;;
+            "member")
+              echo "dockerfile=LibraryApp.MemberService/Dockerfile" >> $GITHUB_OUTPUT
+              echo "context=." >> $GITHUB_OUTPUT
+              ;;
+            "gateway")
+              echo "dockerfile=LibraryApp.ApiGateway/Dockerfile" >> $GITHUB_OUTPUT
+              echo "context=." >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ needs.setup.outputs.registry_prefix }}-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ needs.setup.outputs.tag }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ steps.service-vars.outputs.context }}
+          file: ${{ steps.service-vars.outputs.dockerfile }}
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Create multi-architecture manifests
+  create-manifests:
+    needs: [setup, build-images]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.setup.outputs.services) }}
+    
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Create and push manifest
+        run: |
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ needs.setup.outputs.registry_prefix }}-${{ matrix.service }}"
+          TAG="${{ needs.setup.outputs.tag }}"
+          
+          docker manifest create ${IMAGE_NAME}:${TAG} \
+            ${IMAGE_NAME}:${TAG}-linux-amd64 \
+            ${IMAGE_NAME}:${TAG}-linux-arm64
+          
+          docker manifest annotate ${IMAGE_NAME}:${TAG} \
+            ${IMAGE_NAME}:${TAG}-linux-amd64 --arch amd64
+          
+          docker manifest annotate ${IMAGE_NAME}:${TAG} \
+            ${IMAGE_NAME}:${TAG}-linux-arm64 --arch arm64
+          
+          docker manifest push ${IMAGE_NAME}:${TAG}
+
+  # Deploy to staging
+  deploy-staging:
+    needs: [setup, create-manifests]
+    if: needs.setup.outputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.libraryapp.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
+
+      - name: Deploy to staging
+        run: |
+          # Update deployment manifests with new image tags
+          for service in $(echo '${{ needs.setup.outputs.services }}' | jq -r '.[]'); do
+            IMAGE_NAME="${{ env.REGISTRY }}/${{ needs.setup.outputs.registry_prefix }}-${service}:${{ needs.setup.outputs.tag }}"
+            
+            # Update Kubernetes deployment
+            kubectl set image deployment/libraryapp-${service} \
+              libraryapp-${service}=${IMAGE_NAME} \
+              --namespace=staging
+            
+            # Wait for rollout to complete
+            kubectl rollout status deployment/libraryapp-${service} \
+              --namespace=staging \
+              --timeout=600s
+          done
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployment..."
+          kubectl get pods --namespace=staging
+          
+          # Check if all pods are running
+          for service in $(echo '${{ needs.setup.outputs.services }}' | jq -r '.[]'); do
+            kubectl wait --for=condition=ready pod \
+              -l app=libraryapp-${service} \
+              --namespace=staging \
+              --timeout=300s
+          done
+
+  # Run smoke tests
+  smoke-tests:
+    needs: [setup, deploy-staging]
+    if: needs.setup.outputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Run smoke tests
+        env:
+          STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL || 'https://staging.libraryapp.com' }}
+        run: |
+          # Basic health checks
+          services=("auth" "book" "member" "gateway")
+          
+          for service in "${services[@]}"; do
+            echo "Testing $service service..."
+            
+            # Health check
+            if curl -f "${STAGING_BASE_URL}/api/${service}/health" > /dev/null 2>&1; then
+              echo "✅ $service health check passed"
+            else
+              echo "❌ $service health check failed"
+              exit 1
+            fi
+            
+            # Basic API test
+            case $service in
+              "auth")
+                # Test login endpoint
+                response=$(curl -s -w "%{http_code}" "${STAGING_BASE_URL}/api/auth/test" -o /dev/null)
+                if [ "$response" -eq 200 ] || [ "$response" -eq 401 ]; then
+                  echo "✅ $service API endpoint accessible"
+                else
+                  echo "❌ $service API endpoint failed (HTTP $response)"
+                  exit 1
+                fi
+                ;;
+              "gateway")
+                # Test gateway routing
+                response=$(curl -s -w "%{http_code}" "${STAGING_BASE_URL}/api/books" -o /dev/null)
+                if [ "$response" -eq 200 ] || [ "$response" -eq 401 ]; then
+                  echo "✅ Gateway routing working"
+                else
+                  echo "❌ Gateway routing failed (HTTP $response)"
+                  exit 1
+                fi
+                ;;
+            esac
+          done
+
+      - name: Performance test
+        run: |
+          # Simple load test using curl
+          echo "Running basic performance test..."
+          
+          for i in {1..10}; do
+            start_time=$(date +%s%N)
+            curl -s "${STAGING_BASE_URL}/api/books/health" > /dev/null
+            end_time=$(date +%s%N)
+            
+            duration=$(( (end_time - start_time) / 1000000 ))
+            echo "Request $i: ${duration}ms"
+            
+            if [ $duration -gt 5000 ]; then
+              echo "❌ Response time too slow: ${duration}ms"
+              exit 1
+            fi
+          done
+          
+          echo "✅ Performance test passed"
+
+  # Deploy to production (manual approval required)
+  deploy-production:
+    needs: [setup, create-manifests, smoke-tests]
+    if: needs.setup.outputs.environment == 'production' || (needs.setup.outputs.environment == 'staging' && github.event_name == 'release')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://libraryapp.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > ~/.kube/config
+
+      - name: Blue-Green deployment
+        run: |
+          # Implement blue-green deployment strategy
+          for service in $(echo '${{ needs.setup.outputs.services }}' | jq -r '.[]'); do
+            IMAGE_NAME="${{ env.REGISTRY }}/${{ needs.setup.outputs.registry_prefix }}-${service}:${{ needs.setup.outputs.tag }}"
+            
+            echo "Deploying $service to production..."
+            
+            # Create new deployment with green suffix
+            kubectl create deployment libraryapp-${service}-green \
+              --image=${IMAGE_NAME} \
+              --namespace=production \
+              --dry-run=client -o yaml | kubectl apply -f -
+            
+            # Scale up green deployment
+            kubectl scale deployment libraryapp-${service}-green \
+              --replicas=3 \
+              --namespace=production
+            
+            # Wait for green deployment to be ready
+            kubectl rollout status deployment/libraryapp-${service}-green \
+              --namespace=production \
+              --timeout=600s
+            
+            # Health check on green deployment
+            sleep 30
+            
+            # Switch traffic to green (update service selector)
+            kubectl patch service libraryapp-${service} \
+              -p '{"spec":{"selector":{"app":"libraryapp-'${service}'-green"}}}' \
+              --namespace=production
+            
+            # Wait a bit then remove blue deployment
+            sleep 60
+            kubectl delete deployment libraryapp-${service} \
+              --namespace=production --ignore-not-found=true
+            
+            # Rename green to main
+            kubectl patch deployment libraryapp-${service}-green \
+              -p '{"metadata":{"name":"libraryapp-'${service}'"}}' \
+              --namespace=production
+          done
+
+      - name: Verify production deployment
+        run: |
+          echo "Verifying production deployment..."
+          kubectl get pods --namespace=production
+          
+          # Final health checks
+          for service in $(echo '${{ needs.setup.outputs.services }}' | jq -r '.[]'); do
+            kubectl wait --for=condition=ready pod \
+              -l app=libraryapp-${service} \
+              --namespace=production \
+              --timeout=300s
+          done
+
+  # Post-deployment monitoring
+  post-deployment:
+    needs: [setup, deploy-production]
+    if: always() && (needs.deploy-production.result == 'success' || needs.deploy-staging.result == 'success')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup monitoring
+        run: |
+          # Configure Application Insights monitoring
+          echo "Setting up post-deployment monitoring..."
+          
+          # Send deployment event to Application Insights
+          if [ -n "${{ secrets.APPLICATION_INSIGHTS_CONNECTION_STRING }}" ]; then
+            curl -X POST "https://dc.services.visualstudio.com/v2/track" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "name": "Microsoft.ApplicationInsights.Event",
+                "time": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3N)'Z",
+                "data": {
+                  "baseType": "EventData",
+                  "baseData": {
+                    "name": "Deployment",
+                    "properties": {
+                      "environment": "${{ needs.setup.outputs.environment }}",
+                      "services": "${{ needs.setup.outputs.services }}",
+                      "version": "${{ needs.setup.outputs.tag }}",
+                      "status": "success"
+                    }
+                  }
+                }
+              }'
+          fi
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          # Send notification to Slack/Teams (if configured)
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            status="${{ job.status }}"
+            color=$([ "$status" = "success" ] && echo "good" || echo "danger")
+            
+            curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "attachments": [{
+                  "color": "'$color'",
+                  "title": "LibraryApp Deployment",
+                  "fields": [
+                    {"title": "Environment", "value": "${{ needs.setup.outputs.environment }}", "short": true},
+                    {"title": "Version", "value": "${{ needs.setup.outputs.tag }}", "short": true},
+                    {"title": "Status", "value": "'$status'", "short": true}
+                  ]
+                }]
+              }'
+          fi
+
+  # Rollback capability
+  rollback:
+    if: failure() && (needs.deploy-production.result == 'failure' || needs.smoke-tests.result == 'failure')
+    needs: [setup, deploy-production, smoke-tests]
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.setup.outputs.environment }}
+    
+    steps:
+      - name: Rollback deployment
+        run: |
+          echo "Rolling back failed deployment..."
+          
+          for service in $(echo '${{ needs.setup.outputs.services }}' | jq -r '.[]'); do
+            # Rollback to previous version
+            kubectl rollout undo deployment/libraryapp-${service} \
+              --namespace=${{ needs.setup.outputs.environment }}
+            
+            # Wait for rollback to complete
+            kubectl rollout status deployment/libraryapp-${service} \
+              --namespace=${{ needs.setup.outputs.environment }} \
+              --timeout=600s
+          done
+          
+          echo "Rollback completed"

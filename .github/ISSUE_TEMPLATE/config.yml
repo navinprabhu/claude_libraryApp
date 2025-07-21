@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/your-org/libraryapp/wiki
+    about: Check our documentation for setup and usage guides
+  - name: Discussions
+    url: https://github.com/your-org/libraryapp/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Security Issues
+    url: https://github.com/your-org/libraryapp/security/advisories
+    about: Report security vulnerabilities privately

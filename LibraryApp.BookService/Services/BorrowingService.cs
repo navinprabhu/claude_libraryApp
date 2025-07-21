@@ -2,6 +2,8 @@ using AutoMapper;
 using LibraryApp.BookService.Data.Repositories;
 using LibraryApp.BookService.Models.Entities;
 using LibraryApp.BookService.Models.Requests;
+using LibraryApp.Shared.Events;
+using LibraryApp.Shared.Infrastructure.Interfaces;
 using LibraryApp.Shared.Models.Common;
 using LibraryApp.Shared.Models.DTOs;
 
@@ -13,6 +15,8 @@ namespace LibraryApp.BookService.Services
         private readonly IBookRepository _bookRepository;
         private readonly IMapper _mapper;
         private readonly ILogger<BorrowingService> _logger;
+        private readonly IEventPublisher _eventPublisher;
+        private readonly ICorrelationIdService _correlationIdService;
         private const int DefaultBorrowingPeriodDays = 14;
         private const int MaxBooksPerMember = 5;
 
@@ -20,12 +24,16 @@ namespace LibraryApp.BookService.Services
             IBorrowingRepository borrowingRepository,
             IBookRepository bookRepository,
             IMapper mapper,
-            ILogger<BorrowingService> logger)
+            ILogger<BorrowingService> logger,
+            IEventPublisher eventPublisher,
+            ICorrelationIdService correlationIdService)
         {
             _borrowingRepository = borrowingRepository;
             _bookRepository = bookRepository;
             _mapper = mapper;
             _logger = logger;
+            _eventPublisher = eventPublisher;
+            _correlationIdService = correlationIdService;
         }
 
         public async Task<ApiResponse<BorrowingRecordDto>> BorrowBookAsync(BorrowBookRequest request, string borrowedBy)
@@ -74,6 +82,32 @@ namespace LibraryApp.BookService.Services
 
                 var recordDto = _mapper.Map<BorrowingRecordDto>(createdRecord);
 
+                // Publish BookBorrowedEvent
+                var bookBorrowedEvent = new BookBorrowedEvent
+                {
+                    BorrowingRecordId = createdRecord.Id,
+                    BookId = createdRecord.BookId,
+                    MemberId = createdRecord.MemberId,
+                    BorrowDate = createdRecord.BorrowedAt,
+                    DueDate = createdRecord.DueDate,
+                    BookTitle = book.Title,
+                    MemberEmail = createdRecord.MemberEmail,
+                    CorrelationId = _correlationIdService.GetCorrelationId() ?? Guid.NewGuid().ToString()
+                };
+
+                try
+                {
+                    await _eventPublisher.PublishAsync(bookBorrowedEvent);
+                    _logger.LogInformation("BookBorrowedEvent published for BorrowingRecord {BorrowingRecordId}", 
+                        createdRecord.Id);
+                }
+                catch (Exception eventEx)
+                {
+                    _logger.LogError(eventEx, "Failed to publish BookBorrowedEvent for BorrowingRecord {BorrowingRecordId}", 
+                        createdRecord.Id);
+                    // Don't fail the operation if event publishing fails
+                }
+
                 _logger.LogInformation("Book borrowed successfully: BookId {BookId} by Member {MemberId}", 
                     request.BookId, request.MemberId);
 
@@ -115,6 +149,37 @@ namespace LibraryApp.BookService.Services
                 await _bookRepository.UpdateAvailableCopiesAsync(borrowingRecord.BookId, 1);
 
                 var recordDto = _mapper.Map<BorrowingRecordDto>(borrowingRecord);
+
+                // Get book details for the event
+                var book = await _bookRepository.GetByIdAsync(borrowingRecord.BookId);
+
+                // Publish BookReturnedEvent
+                var bookReturnedEvent = new BookReturnedEvent
+                {
+                    BorrowingRecordId = borrowingRecord.Id,
+                    BookId = borrowingRecord.BookId,
+                    MemberId = borrowingRecord.MemberId,
+                    ReturnDate = borrowingRecord.ReturnedAt ?? DateTime.UtcNow,
+                    DueDate = borrowingRecord.DueDate,
+                    IsLate = borrowingRecord.ReturnedAt > borrowingRecord.DueDate,
+                    LateFee = borrowingRecord.LateFee,
+                    BookTitle = book?.Title ?? "Unknown",
+                    MemberEmail = borrowingRecord.MemberEmail,
+                    CorrelationId = _correlationIdService.GetCorrelationId() ?? Guid.NewGuid().ToString()
+                };
+
+                try
+                {
+                    await _eventPublisher.PublishAsync(bookReturnedEvent);
+                    _logger.LogInformation("BookReturnedEvent published for BorrowingRecord {BorrowingRecordId}", 
+                        borrowingRecord.Id);
+                }
+                catch (Exception eventEx)
+                {
+                    _logger.LogError(eventEx, "Failed to publish BookReturnedEvent for BorrowingRecord {BorrowingRecordId}", 
+                        borrowingRecord.Id);
+                    // Don't fail the operation if event publishing fails
+                }
 
                 _logger.LogInformation("Book returned successfully: BorrowingRecordId {BorrowingRecordId}", 
                     request.BorrowingRecordId);
@@ -337,6 +402,25 @@ namespace LibraryApp.BookService.Services
             {
                 _logger.LogError(ex, "Error checking if member can borrow: MemberId {MemberId}", memberId);
                 return ApiResponse<bool>.ErrorResponse("Failed to check borrowing eligibility", 500);
+            }
+        }
+
+        public async Task<ApiResponse<IEnumerable<BorrowingRecordDto>>> GetActiveBorrowingsForBookAsync(int bookId)
+        {
+            try
+            {
+                var borrowings = await _borrowingRepository.GetActiveBorrowingsForBookAsync(bookId);
+                var borrowingDtos = _mapper.Map<IEnumerable<BorrowingRecordDto>>(borrowings);
+
+                _logger.LogDebug("Retrieved {Count} active borrowings for book {BookId}", 
+                    borrowingDtos.Count(), bookId);
+
+                return ApiResponse<IEnumerable<BorrowingRecordDto>>.SuccessResponse(borrowingDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting active borrowings for book: BookId {BookId}", bookId);
+                return ApiResponse<IEnumerable<BorrowingRecordDto>>.ErrorResponse("Failed to get active borrowings", 500);
             }
         }
     }

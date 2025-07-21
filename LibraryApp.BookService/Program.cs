@@ -94,18 +94,16 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Add shared infrastructure services (without repository registration)
-// builder.Services.AddSharedInfrastructure();
-
-// Add correlation ID logging
-builder.Services.AddCorrelationIdLogging();
+// Add shared infrastructure services (event publishing, correlation ID)
+builder.Services.AddSharedInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
 app.UseGlobalExceptionHandling();
 
-app.UseCorrelationId();
+// Add shared middleware (correlation ID, request logging)
+app.UseSharedMiddleware();
 
 if (app.Environment.IsDevelopment())
 {

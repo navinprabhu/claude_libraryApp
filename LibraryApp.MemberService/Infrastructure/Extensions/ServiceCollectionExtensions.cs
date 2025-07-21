@@ -48,6 +48,13 @@ namespace LibraryApp.MemberService.Infrastructure.Extensions
                 client.Timeout = TimeSpan.FromSeconds(30);
                 client.DefaultRequestHeaders.Add("User-Agent", "MemberService/1.0");
             });
+
+            // Register HttpClient for BookService health checks
+            services.AddHttpClient<BookServiceHealthCheck>(client =>
+            {
+                client.BaseAddress = new Uri(bookServiceUrl);
+                client.Timeout = TimeSpan.FromSeconds(10);
+            });
         }
     }
 }

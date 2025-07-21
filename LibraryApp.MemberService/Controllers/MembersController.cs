@@ -2,6 +2,7 @@ using LibraryApp.MemberService.Infrastructure.Authorization;
 using LibraryApp.MemberService.Models.Entities;
 using LibraryApp.MemberService.Models.Requests;
 using LibraryApp.MemberService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -214,6 +215,67 @@ namespace LibraryApp.MemberService.Controllers
 
             var result = await _memberService.CanMemberBorrowBooksAsync(id);
             return StatusCode(result.StatusCode, result);
+        }
+
+        /// <summary>
+        /// Gets detailed borrowing eligibility for a member - used by other services
+        /// </summary>
+        [HttpGet("{id:int}/borrowing-eligibility")]
+        [AllowAnonymous] // Allow inter-service calls
+        public async Task<IActionResult> GetBorrowingEligibility(int id)
+        {
+            try
+            {
+                var member = await _memberService.GetMemberByIdAsync(id);
+                if (!member.Success || member.Data == null)
+                {
+                    return NotFound($"Member with ID {id} not found");
+                }
+
+                var memberData = member.Data;
+                
+                // Check if member is active
+                if (!memberData.IsActive)
+                {
+                    return Ok(new
+                    {
+                        IsEligible = false,
+                        Reason = "Member account is inactive",
+                        CurrentBorrowedCount = 0,
+                        MaxBorrowLimit = memberData.MaxBooksAllowed,
+                        HasOverdueBooks = false,
+                        OutstandingFees = 0.0m
+                    });
+                }
+
+                // Get current borrowing status from BookService
+                var bookServiceClient = HttpContext.RequestServices.GetRequiredService<Services.External.IBookServiceClient>();
+                var activeBorrowingsResult = await bookServiceClient.GetMemberBorrowedBooksAsync(id);
+                
+                var currentBorrowedCount = activeBorrowingsResult.Success ? activeBorrowingsResult.Data?.Count() ?? 0 : 0;
+                var hasOverdueBooks = activeBorrowingsResult.Success && 
+                    activeBorrowingsResult.Data?.Any(b => b.DueDate < DateTime.UtcNow && !b.IsReturned) == true;
+
+                var eligibility = new
+                {
+                    IsEligible = memberData.IsActive && currentBorrowedCount < memberData.MaxBooksAllowed && !hasOverdueBooks,
+                    Reason = !memberData.IsActive ? "Member account is inactive" :
+                             currentBorrowedCount >= memberData.MaxBooksAllowed ? $"Member has reached borrowing limit ({memberData.MaxBooksAllowed})" :
+                             hasOverdueBooks ? "Member has overdue books" : 
+                             "Member is eligible to borrow",
+                    CurrentBorrowedCount = currentBorrowedCount,
+                    MaxBorrowLimit = memberData.MaxBooksAllowed,
+                    HasOverdueBooks = hasOverdueBooks,
+                    OutstandingFees = 0.0m // Could be enhanced to track actual fees
+                };
+
+                return Ok(eligibility);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting borrowing eligibility for member {MemberId}", id);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         private string? GetCurrentUsername()

@@ -1,6 +1,7 @@
 using LibraryApp.BookService.Infrastructure.Authorization;
 using LibraryApp.BookService.Models.Requests;
 using LibraryApp.BookService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -207,6 +208,43 @@ namespace LibraryApp.BookService.Controllers
 
             var result = await _borrowingService.CanMemberBorrowAsync(memberId, maxBooks);
             return StatusCode(result.StatusCode, result);
+        }
+
+        /// <summary>
+        /// Gets current borrowed books for a member - used by MemberService
+        /// </summary>
+        [HttpGet("member/{memberId:int}/current")]
+        [AllowAnonymous] // Allow inter-service calls
+        public async Task<IActionResult> GetMemberCurrentBorrowings(int memberId)
+        {
+            try
+            {
+                var result = await _borrowingService.GetMemberBorrowingsAsync(memberId);
+                if (!result.Success)
+                {
+                    return StatusCode(result.StatusCode, result);
+                }
+
+                // Filter only active (not returned) borrowings and map to simplified format
+                var activeBorrowings = result.Data?.Where(b => !b.IsReturned).Select(b => new
+                {
+                    BorrowingId = b.Id,
+                    BookId = b.BookId,
+                    BookTitle = b.BookTitle,
+                    BookAuthor = b.BookAuthor,
+                    BorrowDate = b.BorrowedAt,
+                    DueDate = b.DueDate,
+                    IsOverdue = b.DueDate < DateTime.UtcNow,
+                    ReturnDate = (DateTime?)null
+                });
+
+                return Ok(activeBorrowings);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current borrowings for member {MemberId}", memberId);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         private string GetCurrentUsername()

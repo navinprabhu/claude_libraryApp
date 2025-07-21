@@ -24,4 +24,14 @@ namespace LibraryApp.Shared.Events
         public string Email { get; set; } = string.Empty;
         public DateTime DeactivationDate { get; set; }
     }
+
+    public class MemberStatusChangedEvent : BaseEvent
+    {
+        public int MemberId { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string PreviousStatus { get; set; } = string.Empty;
+        public string NewStatus { get; set; } = string.Empty;
+        public DateTime StatusChangeDate { get; set; }
+        public string? Reason { get; set; }
+    }
 }

@@ -27,6 +27,9 @@ builder.Services.AddControllers();
 // Add member service dependencies
 builder.Services.AddMemberServiceDependencies(builder.Configuration);
 
+// Add shared infrastructure services (event publishing, correlation ID, HTTP clients)
+builder.Services.AddSharedInfrastructure(builder.Configuration);
+
 // Add CORS
 builder.Services.AddCors(options =>
 {
@@ -94,7 +97,13 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// Configure the HTTP request pipeline
+app.UseGlobalExceptionHandling();
+
 app.UseCors();
+
+// Add shared middleware (correlation ID, request logging)
+app.UseSharedMiddleware();
 
 app.UseJwtAuthentication();
 

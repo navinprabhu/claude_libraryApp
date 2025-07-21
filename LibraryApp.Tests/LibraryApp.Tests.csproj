@@ -25,6 +25,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\LibraryApp.AuthService\LibraryApp.AuthService.csproj" />
+    <ProjectReference Include="..\LibraryApp.BookService\LibraryApp.BookService.csproj" />
+    <ProjectReference Include="..\LibraryApp.MemberService\LibraryApp.MemberService.csproj" />
     <ProjectReference Include="..\LibraryApp.Shared.Models\LibraryApp.Shared.Models.csproj" />
     <ProjectReference Include="..\LibraryApp.Shared.Infrastructure\LibraryApp.Shared.Infrastructure.csproj" />
     <ProjectReference Include="..\LibraryApp.Shared.Events\LibraryApp.Shared.Events.csproj" />

@@ -13,7 +13,11 @@ namespace LibraryApp.Shared.Models.DTOs
         public bool IsReturned { get; set; }
         public decimal? LateFee { get; set; }
         public BookDto Book { get; set; } = new();
+        public string? BookTitle { get; set; }
+        public string? BookAuthor { get; set; }
         public MemberDto Member { get; set; } = new();
+        public string MemberEmail { get; set; } = string.Empty;
+        public DateTime BorrowedAt { get; set; }
     }
 
     public class BorrowRequestDto

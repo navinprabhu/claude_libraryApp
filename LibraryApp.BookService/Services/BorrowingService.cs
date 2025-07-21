@@ -406,23 +406,23 @@ namespace LibraryApp.BookService.Services
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<BorrowingRecordDto>>> GetActiveBorrowingsForBookAsync(int bookId)
-        {
-            try
-            {
-                var borrowings = await _borrowingRepository.GetActiveBorrowingsForBookAsync(bookId);
-                var borrowingDtos = _mapper.Map<IEnumerable<BorrowingRecordDto>>(borrowings);
+        //public async Task<ApiResponse<IEnumerable<BorrowingRecordDto>>> GetActiveBorrowingsForBookAsync(int bookId)
+        //{
+        //    try
+        //    {
+        //        var borrowings = await _borrowingRepository.GetActiveBorrowingsForBookAsync(bookId);
+        //        var borrowingDtos = _mapper.Map<IEnumerable<BorrowingRecordDto>>(borrowings);
 
-                _logger.LogDebug("Retrieved {Count} active borrowings for book {BookId}", 
-                    borrowingDtos.Count(), bookId);
+        //        _logger.LogDebug("Retrieved {Count} active borrowings for book {BookId}", 
+        //            borrowingDtos.Count(), bookId);
 
-                return ApiResponse<IEnumerable<BorrowingRecordDto>>.SuccessResponse(borrowingDtos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting active borrowings for book: BookId {BookId}", bookId);
-                return ApiResponse<IEnumerable<BorrowingRecordDto>>.ErrorResponse("Failed to get active borrowings", 500);
-            }
-        }
+        //        return ApiResponse<IEnumerable<BorrowingRecordDto>>.SuccessResponse(borrowingDtos);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error getting active borrowings for book: BookId {BookId}", bookId);
+        //        return ApiResponse<IEnumerable<BorrowingRecordDto>>.ErrorResponse("Failed to get active borrowings", 500);
+        //    }
+        //}
     }
 }

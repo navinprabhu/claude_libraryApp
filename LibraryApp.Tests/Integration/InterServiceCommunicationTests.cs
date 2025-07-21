@@ -20,20 +20,20 @@ namespace LibraryApp.Tests.Integration
     public class InterServiceCommunicationTests
     {
         private readonly Mock<ILogger<MembersController>> _memberControllerLogger;
-        private readonly Mock<ILogger<BooksController>> _bookControllerLogger;
+        private readonly Mock<ILogger<BorrowingsController>> _borrowingsControllerLogger;
         private readonly Mock<IMemberService> _memberService;
         private readonly Mock<IBookService> _bookService;
-        private readonly Mock<IBookServiceClient> _bookServiceClient;
+        private readonly Mock<LibraryApp.MemberService.Services.External.IBookServiceClient> _bookServiceClient;
         private readonly Mock<IEventPublisher> _eventPublisher;
         private readonly Mock<ICorrelationIdService> _correlationIdService;
 
         public InterServiceCommunicationTests()
         {
             _memberControllerLogger = new Mock<ILogger<MembersController>>();
-            _bookControllerLogger = new Mock<ILogger<BooksController>>();
+            _borrowingsControllerLogger = new Mock<ILogger<BorrowingsController>>();
             _memberService = new Mock<IMemberService>();
             _bookService = new Mock<IBookService>();
-            _bookServiceClient = new Mock<IBookServiceClient>();
+            _bookServiceClient = new Mock<LibraryApp.MemberService.Services.External.IBookServiceClient>();
             _eventPublisher = new Mock<IEventPublisher>();
             _correlationIdService = new Mock<ICorrelationIdService>();
         }
@@ -64,7 +64,7 @@ namespace LibraryApp.Tests.Integration
                     BookAuthor = "Test Author",
                     BorrowDate = DateTime.UtcNow.AddDays(-5),
                     DueDate = DateTime.UtcNow.AddDays(9),
-                    IsReturned = false
+                    IsOverdue = false
                 }
             };
 
@@ -86,7 +86,7 @@ namespace LibraryApp.Tests.Integration
                     })));
 
             var serviceProvider = new Mock<IServiceProvider>();
-            serviceProvider.Setup(s => s.GetService(typeof(IBookServiceClient)))
+            serviceProvider.Setup(s => s.GetService(typeof(LibraryApp.MemberService.Services.External.IBookServiceClient)))
                 .Returns(_bookServiceClient.Object);
 
             var httpContext = new DefaultHttpContext();
@@ -123,7 +123,7 @@ namespace LibraryApp.Tests.Integration
             _correlationIdService.Setup(s => s.GetCorrelationId()).Returns(correlationId);
 
             var borrowingService = new Mock<IBorrowingService>();
-            var controller = new BorrowingsController(borrowingService.Object, _bookControllerLogger.Object);
+            var controller = new BorrowingsController(borrowingService.Object, _borrowingsControllerLogger.Object);
 
             var httpContext = new DefaultHttpContext();
             httpContext.Items["CorrelationId"] = correlationId;
@@ -145,7 +145,7 @@ namespace LibraryApp.Tests.Integration
                 }
             };
 
-            borrowingService.Setup(s => s.GetActiveBorrowingsForMemberAsync(memberId))
+            borrowingService.Setup(s => s.GetMemberBorrowingsAsync(memberId))
                 .ReturnsAsync(ApiResponse<IEnumerable<BorrowingRecordDto>>.SuccessResponse(borrowedBooks));
 
             // Act
@@ -153,14 +153,16 @@ namespace LibraryApp.Tests.Integration
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
-            borrowingService.Verify(s => s.GetActiveBorrowingsForMemberAsync(memberId), Times.Once);
+            borrowingService.Verify(s => s.GetMemberBorrowingsAsync(memberId), Times.Once);
         }
 
         [Fact]
-        public async Task CorrelationId_FlowsThroughServices()
+        public void CorrelationId_FlowsThroughServices()
         {
             // Arrange
             var correlationId = Guid.NewGuid().ToString();
+            
+            // Act
             _correlationIdService.Setup(s => s.GetCorrelationId()).Returns(correlationId);
 
             // Verify correlation ID is properly set and flows through the system
@@ -173,13 +175,13 @@ namespace LibraryApp.Tests.Integration
             // Arrange
             var bookBorrowedEvent = new LibraryApp.Shared.Events.BookBorrowedEvent
             {
-                Id = Guid.NewGuid(),
-                EventType = "BookBorrowed",
+                BorrowingRecordId = 1000,
+                //EventType = "BookBorrowed",
                 Timestamp = DateTime.UtcNow,
                 CorrelationId = Guid.NewGuid().ToString(),
                 BookId = 1,
                 BookTitle = "Test Book",
-                BookAuthor = "Test Author",
+                //BookAuthor = "Test Author",
                 MemberId = 1,
                 MemberEmail = "test@example.com",
                 BorrowDate = DateTime.UtcNow,
@@ -207,7 +209,7 @@ namespace LibraryApp.Tests.Integration
                 .ReturnsAsync(memberResponse);
 
             var serviceProvider = new Mock<IServiceProvider>();
-            serviceProvider.Setup(s => s.GetService(typeof(IBookServiceClient)))
+            serviceProvider.Setup(s => s.GetService(typeof(LibraryApp.MemberService.Services.External.IBookServiceClient)))
                 .Returns(_bookServiceClient.Object);
 
             var httpContext = new DefaultHttpContext();

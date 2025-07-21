@@ -4,6 +4,7 @@ using LibraryApp.Shared.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using LibraryApp.BookService.Models.Entities;
 
 namespace LibraryApp.BookService.Controllers
 {
@@ -167,7 +168,7 @@ namespace LibraryApp.BookService.Controllers
 
                 // Get current borrowings for this book
                 var borrowingService = HttpContext.RequestServices.GetRequiredService<IBorrowingService>();
-                var currentBorrowings = await borrowingService.GetActiveBorrowingsForBookAsync(id);
+                var currentBorrowings = await borrowingService.GetBookBorrowingsAsync(id);
 
                 var borrowingStatus = new
                 {

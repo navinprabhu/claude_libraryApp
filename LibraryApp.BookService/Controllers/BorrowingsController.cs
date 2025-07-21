@@ -230,8 +230,8 @@ namespace LibraryApp.BookService.Controllers
                 {
                     BorrowingId = b.Id,
                     BookId = b.BookId,
-                    BookTitle = b.BookTitle,
-                    BookAuthor = b.BookAuthor,
+                    //BookTitle = b.BookTitle,
+                    //BookAuthor = b.BookAuthor,
                     BorrowDate = b.BorrowedAt,
                     DueDate = b.DueDate,
                     IsOverdue = b.DueDate < DateTime.UtcNow,

@@ -60,7 +60,7 @@ namespace LibraryApp.MemberService.Services.External
                         BorrowedAt = b.BorrowDate,
                         DueDate = b.DueDate,
                         IsReturned = false,
-                        ReturnedAt = null
+                        ReturnDate = null
                     }) ?? Enumerable.Empty<BorrowingRecordDto>();
 
                     return ApiResponse<IEnumerable<BorrowingRecordDto>>.SuccessResponse(borrowingRecords);

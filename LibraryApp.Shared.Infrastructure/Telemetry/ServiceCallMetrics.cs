@@ -37,9 +37,9 @@ namespace LibraryApp.Shared.Infrastructure.Telemetry
         {
             var tags = new TagList
             {
-                ["service_name"] = serviceName,
-                ["operation"] = operation,
-                ["correlation_id"] = correlationId
+                new("service_name", serviceName),
+                new("operation", operation),
+                new("correlation_id", correlationId)
             };
 
             _serviceCallCounter.Add(1, tags);
@@ -49,10 +49,10 @@ namespace LibraryApp.Shared.Infrastructure.Telemetry
         {
             var tags = new TagList
             {
-                ["service_name"] = serviceName,
-                ["operation"] = operation,
-                ["success"] = success.ToString().ToLower(),
-                ["correlation_id"] = correlationId
+                new("service_name", serviceName),
+                new("operation", operation),
+                new("success", success.ToString().ToLower()),
+                new("correlation_id", correlationId)
             };
 
             _serviceCallDuration.Record(durationMs, tags);
@@ -67,9 +67,9 @@ namespace LibraryApp.Shared.Infrastructure.Telemetry
         {
             var tags = new TagList
             {
-                ["service_name"] = serviceName,
-                ["operation"] = operation,
-                ["correlation_id"] = correlationId
+                new("service_name", serviceName),
+                new("operation", operation),
+                new("correlation_id", correlationId)
             };
 
             _serviceCallSize.Record(sizeBytes, tags);

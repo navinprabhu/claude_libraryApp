@@ -19,6 +19,7 @@ builder.Host.UseSerilog();
 
 // Add services to the container
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 
 // Configure Entity Framework with In-Memory Database
 builder.Services.AddDbContext<BookDbContext>(options =>

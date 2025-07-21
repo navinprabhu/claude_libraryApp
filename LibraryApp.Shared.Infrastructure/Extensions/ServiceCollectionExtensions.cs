@@ -3,8 +3,10 @@ using LibraryApp.Shared.Infrastructure.Middleware;
 using LibraryApp.Shared.Infrastructure.Repositories;
 using LibraryApp.Shared.Infrastructure.Services;
 using LibraryApp.Shared.Infrastructure.Telemetry;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
@@ -21,7 +23,6 @@ namespace LibraryApp.Shared.Infrastructure.Extensions
 
             // Add correlation ID service
             services.AddSingleton<ICorrelationIdService, CorrelationIdService>();
-            services.AddHttpContextAccessor();
 
             // Add event publisher
             services.AddSingleton<IEventPublisher, InMemoryEventPublisher>();
@@ -49,9 +50,9 @@ namespace LibraryApp.Shared.Infrastructure.Extensions
                     retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                     onRetry: (outcome, timespan, retryCount, context) =>
                     {
-                        var logger = context.GetLogger();
-                        logger?.LogWarning(
-                            "Retry {RetryCount} for {OperationKey} after {Delay}ms due to: {Exception}",
+                        // Log retry attempts - can be extended with proper logger injection
+                        Console.WriteLine(
+                            "Retry {0} for {1} after {2}ms due to: {3}",
                             retryCount,
                             context.OperationKey,
                             timespan.TotalMilliseconds,

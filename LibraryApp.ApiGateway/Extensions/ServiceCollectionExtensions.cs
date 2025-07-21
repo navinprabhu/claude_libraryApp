@@ -2,6 +2,7 @@ using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Ocelot.DependencyInjection;
+using Ocelot.Provider.Polly;
 using Serilog;
 using System.Text;
 
@@ -11,8 +12,9 @@ namespace LibraryApp.ApiGateway.Extensions
     {
         public static IServiceCollection AddApiGatewayServices(this IServiceCollection services, IConfiguration configuration)
         {
-            // Add Ocelot
-            services.AddOcelot();
+            // Add Ocelot with Polly for QoS support
+            services.AddOcelot()
+                .AddPolly();
 
             // Add Authentication
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

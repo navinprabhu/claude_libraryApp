@@ -48,6 +48,48 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapControllers();
 
+// Add root endpoint with API information
+app.MapGet("/", async (HttpContext context) =>
+{
+    var correlationId = context.Items["CorrelationId"]?.ToString() ?? Guid.NewGuid().ToString();
+    
+    var apiInfo = new
+    {
+        name = "LibraryApp API Gateway",
+        version = "1.0.0",
+        environment = app.Environment.EnvironmentName,
+        timestamp = DateTime.UtcNow,
+        correlationId = correlationId,
+        endpoints = new
+        {
+            health = new
+            {
+                gateway = "/health/gateway",
+                services = "/health/services",
+                individual = new { auth = "/health/auth", books = "/health/books", members = "/health/members" }
+            },
+            api = new
+            {
+                auth = "/api/auth/*",
+                books = "/api/books/*", 
+                members = "/api/members/*"
+            },
+            documentation = new
+            {
+                message = "Visit individual service Swagger UIs:",
+                auth = "http://localhost:5001",
+                books = "http://localhost:5002",
+                members = "http://localhost:5003"
+            }
+        }
+    };
+    
+    Log.Information("API Gateway root endpoint accessed with correlation ID: {CorrelationId}", correlationId);
+    
+    context.Response.ContentType = "application/json";
+    await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(apiInfo, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+});
+
 // Add aggregated health check endpoint
 app.MapGet("/health/gateway", async (HttpContext context) =>
 {

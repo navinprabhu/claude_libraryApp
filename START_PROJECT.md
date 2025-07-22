@@ -176,12 +176,44 @@ dotnet clean
 dotnet build
 ```
 
-### Issue: Port already in use
-**Solution**: Change ports in run commands or kill processes:
+### Issue: Port already in use (e.g., "address already in use")
+**Error**: `Failed to bind to address http://[::1]:5000: address already in use`
+
+**Solutions**:
+
+**Option A - Kill processes using the ports:**
 ```bash
-netstat -ano | findstr :5001
-taskkill /PID <PID_NUMBER> /F
+# Find processes using ports 5000-5003
+netstat -ano | findstr ":5000\|:5001\|:5002\|:5003"
+
+# Kill specific processes (replace PID with actual process ID)
+powershell "Stop-Process -Id <PID> -Force -ErrorAction SilentlyContinue"
+
+# Or kill all dotnet processes
+powershell "Stop-Process -Name dotnet -Force -ErrorAction SilentlyContinue"
 ```
+
+**Option B - Use different ports:**
+```bash
+# API Gateway on port 6000
+cd LibraryApp.ApiGateway
+dotnet run --urls="http://localhost:6000"
+
+# Auth Service on port 6001
+cd LibraryApp.AuthService  
+dotnet run --urls="http://localhost:6001"
+
+# Book Service on port 6002
+cd LibraryApp.BookService
+dotnet run --urls="http://localhost:6002"
+
+# Member Service on port 6003
+cd LibraryApp.MemberService
+dotnet run --urls="http://localhost:6003"
+```
+
+**Option C - Update Ocelot configuration for new ports:**
+If using different ports, update `LibraryApp.ApiGateway/Configuration/ocelot.json` to match the new port numbers.
 
 ### Issue: Docker connectivity issues
 **Solution**: Use native .NET approach as documented above

@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Moq.Protected;
 using System.Security.Claims;
 using Xunit;
 
@@ -232,13 +233,15 @@ namespace LibraryApp.Tests.Integration
         }
 
         [Fact]
-        public async Task BookServiceClient_HandlesServiceUnavailable()
+        public async Task BookServiceClient_HandlesNetworkError()
         {
             // Arrange
             var memberId = 1;
             var mockLogger = new Mock<ILogger<BookServiceClient>>();
             
-            var httpClient = new HttpClient(new MockHttpMessageHandler(System.Net.HttpStatusCode.ServiceUnavailable));
+            // Use an invalid URL to trigger HttpRequestException
+            var httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("http://nonexistent-server:9999/");
             
             var client = new BookServiceClient(httpClient, mockLogger.Object, _correlationIdService.Object);
 

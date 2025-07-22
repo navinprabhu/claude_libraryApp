@@ -31,7 +31,10 @@ app.UseHsts();
 
 // Custom middleware pipeline
 app.UseCorrelationId();
-app.UseRequestLogging();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseRequestLogging();
+}
 
 // CORS
 app.UseCors("ApiGatewayPolicy");
@@ -107,6 +110,7 @@ app.MapGet("/health/gateway", async (HttpContext context) =>
     
     Log.Information("Health check requested for API Gateway with correlation ID: {CorrelationId}", correlationId);
     
+    context.Response.ContentType = "application/json";
     await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(healthInfo));
 });
 
@@ -137,8 +141,11 @@ app.Use(async (context, next) =>
     }
 });
 
-// Use Ocelot
-await app.UseOcelot();
+// Use Ocelot only in non-Testing environments
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    await app.UseOcelot();
+}
 
 Log.Information("API Gateway started successfully on {Environment}", app.Environment.EnvironmentName);
 

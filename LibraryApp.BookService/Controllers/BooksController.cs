@@ -197,6 +197,26 @@ namespace LibraryApp.BookService.Controllers
             }
         }
 
+        /// <summary>
+        /// Get book categories with counts for dashboard
+        /// </summary>
+        [HttpGet("categories")]
+        public async Task<IActionResult> GetBookCategories()
+        {
+            var result = await _bookService.GetBookCategoriesAsync();
+            return StatusCode(result.StatusCode, result);
+        }
+
+        /// <summary>
+        /// Get book statistics for dashboard
+        /// </summary>
+        [HttpGet("statistics")]
+        public async Task<IActionResult> GetBookStatistics()
+        {
+            var result = await _bookService.GetBookStatisticsAsync();
+            return StatusCode(result.StatusCode, result);
+        }
+
         private string GetCurrentUsername()
         {
             return User.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";

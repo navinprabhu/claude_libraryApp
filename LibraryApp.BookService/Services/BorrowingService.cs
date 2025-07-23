@@ -424,5 +424,66 @@ namespace LibraryApp.BookService.Services
         //        return ApiResponse<IEnumerable<BorrowingRecordDto>>.ErrorResponse("Failed to get active borrowings", 500);
         //    }
         //}
+
+        public async Task<ApiResponse<IEnumerable<object>>> GetRecentTransactionsAsync(int limit = 10)
+        {
+            try
+            {
+                var recentBorrowings = await _borrowingRepository.GetRecentBorrowingsAsync(limit);
+                
+                var transactions = recentBorrowings.Select(b => new
+                {
+                    id = b.Id,
+                    memberId = b.MemberId,
+                    memberName = b.MemberEmail, // We have email, not name in borrowing record
+                    bookId = b.BookId,
+                    bookTitle = "Book Title", // Would need to fetch from book data
+                    action = b.IsReturned ? "returned" : "borrowed",
+                    timestamp = b.IsReturned ? b.ReturnedAt : b.BorrowedAt,
+                    dueDate = b.DueDate,
+                    isOverdue = !b.IsReturned && b.DueDate < DateTime.UtcNow
+                }).ToList();
+
+                return ApiResponse<IEnumerable<object>>.SuccessResponse(transactions, "Recent transactions retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving recent transactions");
+                return ApiResponse<IEnumerable<object>>.ErrorResponse("Failed to retrieve recent transactions", 500);
+            }
+        }
+
+        public async Task<ApiResponse<object>> GetBorrowingStatisticsAsync()
+        {
+            try
+            {
+                var allBorrowings = await _borrowingRepository.GetAllAsync();
+                var activeBorrowings = allBorrowings.Where(b => !b.IsReturned).ToList();
+                var overdueBorrowings = activeBorrowings.Where(b => b.DueDate < DateTime.UtcNow).ToList();
+                var dueSoonBorrowings = activeBorrowings.Where(b => b.DueDate >= DateTime.UtcNow && b.DueDate <= DateTime.UtcNow.AddDays(3)).ToList();
+
+                var statistics = new
+                {
+                    totalBorrowings = allBorrowings.Count(),
+                    activeBorrowings = activeBorrowings.Count(),
+                    returnedBorrowings = allBorrowings.Count(b => b.IsReturned),
+                    overdueBorrowings = overdueBorrowings.Count(),
+                    dueSoonBorrowings = dueSoonBorrowings.Count(),
+                    borrowingsThisMonth = allBorrowings.Count(b => b.BorrowedAt >= DateTime.UtcNow.AddDays(-30)),
+                    returnsThisMonth = allBorrowings.Count(b => b.IsReturned && b.ReturnedAt >= DateTime.UtcNow.AddDays(-30)),
+                    averageBorrowingPeriod = allBorrowings.Where(b => b.IsReturned && b.ReturnedAt.HasValue)
+                        .Select(b => (b.ReturnedAt.Value - b.BorrowedAt).TotalDays)
+                        .DefaultIfEmpty(0)
+                        .Average()
+                };
+
+                return ApiResponse<object>.SuccessResponse(statistics, "Borrowing statistics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving borrowing statistics");
+                return ApiResponse<object>.ErrorResponse("Failed to retrieve borrowing statistics", 500);
+            }
+        }
     }
 }

@@ -20,5 +20,9 @@ namespace LibraryApp.BookService.Services
         Task<ApiResponse<int>> GetActiveBorrowingCountAsync(int memberId);
         Task<ApiResponse<bool>> CanMemberBorrowAsync(int memberId, int maxBooksPerMember = 5);
         //Task<ApiResponse<IEnumerable<BorrowingRecordDto>>> GetActiveBorrowingsForBookAsync(int bookId);
+        
+        // Dashboard and Statistics APIs
+        Task<ApiResponse<IEnumerable<object>>> GetRecentTransactionsAsync(int limit = 10);
+        Task<ApiResponse<object>> GetBorrowingStatisticsAsync();
     }
 }

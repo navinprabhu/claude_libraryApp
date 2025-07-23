@@ -124,11 +124,6 @@
       "DisableRateLimitHeaders": false,
       "HttpStatusCode": 429
     },
-    "QoSOptions": {
-      "ExceptionsAllowedBeforeBreaking": 5,
-      "DurationOfBreak": 10000,
-      "TimeoutValue": 60000
-    },
     "LoadBalancerOptions": {
       "Type": "RoundRobin"
     },

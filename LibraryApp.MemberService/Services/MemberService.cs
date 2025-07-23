@@ -324,5 +324,100 @@ namespace LibraryApp.MemberService.Services
                 return ApiResponse<IEnumerable<BorrowingRecordDto>>.ErrorResponse("Failed to retrieve borrowing history", 500);
             }
         }
+
+        public async Task<ApiResponse<object>> GetMemberStatisticsAsync()
+        {
+            try
+            {
+                var allMembers = await _memberRepository.GetAllAsync();
+                var activeMembers = allMembers.Where(m => m.IsActive).ToList();
+
+                var statistics = new
+                {
+                    totalMembers = allMembers.Count(),
+                    activeMembers = activeMembers.Count(),
+                    inactiveMembers = allMembers.Count(m => !m.IsActive),
+                    newMembersThisMonth = allMembers.Count(m => m.CreatedAt >= DateTime.UtcNow.AddDays(-30)),
+                    averageMaxBooksAllowed = allMembers.Any() ? allMembers.Average(m => m.MaxBooksAllowed) : 0,
+                    membershipTypes = allMembers
+                        .GroupBy(m => m.MembershipType ?? "Standard")
+                        .Select(g => new { type = g.Key, count = g.Count() })
+                        .ToList()
+                };
+
+                return ApiResponse<object>.SuccessResponse(statistics, "Member statistics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving member statistics");
+                return ApiResponse<object>.ErrorResponse("Failed to retrieve member statistics", 500);
+            }
+        }
+
+        public async Task<ApiResponse<IEnumerable<MemberDto>>> GetActiveMembersAsync()
+        {
+            try
+            {
+                var activeMembers = await _memberRepository.GetActiveMembersAsync();
+                var memberDtos = _mapper.Map<IEnumerable<MemberDto>>(activeMembers);
+                return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(memberDtos, "Active members retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving active members");
+                return ApiResponse<IEnumerable<MemberDto>>.ErrorResponse("Failed to retrieve active members", 500);
+            }
+        }
+
+        public async Task<ApiResponse<IEnumerable<object>>> GetTopBorrowersAsync(int limit = 5)
+        {
+            try
+            {
+                var allMembers = await _memberRepository.GetAllAsync();
+                
+                // Get borrowing data from BookService for each member
+                var topBorrowers = new List<object>();
+                
+                foreach (var member in allMembers.Take(10)) // Process top 10 to avoid too many service calls
+                {
+                    try
+                    {
+                        var borrowingHistory = await _bookServiceClient.GetMemberBorrowingHistoryAsync(member.Id);
+                        var currentBorrowings = await _bookServiceClient.GetMemberBorrowedBooksAsync(member.Id);
+                        
+                        var totalBorrowings = borrowingHistory.Success ? borrowingHistory.Data?.Count() ?? 0 : 0;
+                        var currentCount = currentBorrowings.Success ? currentBorrowings.Data?.Count() ?? 0 : 0;
+                        
+                        topBorrowers.Add(new
+                        {
+                            memberId = member.Id,
+                            memberName = $"{member.FirstName} {member.LastName}",
+                            email = member.Email,
+                            totalBorrowings = totalBorrowings,
+                            currentBorrowings = currentCount,
+                            membershipType = member.MembershipType ?? "Standard",
+                            joinDate = member.CreatedAt
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to get borrowing data for member {MemberId}", member.Id);
+                        // Continue with next member
+                    }
+                }
+
+                var sortedTopBorrowers = topBorrowers
+                    .OrderByDescending(b => ((dynamic)b).totalBorrowings)
+                    .Take(limit)
+                    .ToList();
+
+                return ApiResponse<IEnumerable<object>>.SuccessResponse(sortedTopBorrowers, "Top borrowers retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving top borrowers");
+                return ApiResponse<IEnumerable<object>>.ErrorResponse("Failed to retrieve top borrowers", 500);
+            }
+        }
     }
 }

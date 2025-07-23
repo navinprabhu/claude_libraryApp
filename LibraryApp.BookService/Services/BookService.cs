@@ -287,5 +287,63 @@ namespace LibraryApp.BookService.Services
                 return ApiResponse<IEnumerable<BookDto>>.ErrorResponse("Failed to retrieve overdue books", 500);
             }
         }
+
+        public async Task<ApiResponse<IEnumerable<object>>> GetBookCategoriesAsync()
+        {
+            try
+            {
+                var books = await _bookRepository.GetAllAsync();
+                
+                var categories = books
+                    .GroupBy(b => b.Genre ?? "Uncategorized")
+                    .Select(g => new
+                    {
+                        category = g.Key,
+                        totalBooks = g.Count(),
+                        availableBooks = g.Count(b => b.AvailableCopies > 0),
+                        borrowedBooks = g.Count(b => b.AvailableCopies < b.TotalCopies)
+                    })
+                    .OrderByDescending(c => c.totalBooks)
+                    .ToList();
+
+                return ApiResponse<IEnumerable<object>>.SuccessResponse(categories, "Book categories retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving book categories");
+                return ApiResponse<IEnumerable<object>>.ErrorResponse("Failed to retrieve book categories", 500);
+            }
+        }
+
+        public async Task<ApiResponse<object>> GetBookStatisticsAsync()
+        {
+            try
+            {
+                var books = await _bookRepository.GetAllAsync();
+                var overdueBooks = await _bookRepository.GetOverdueBooksAsync();
+                
+                var statistics = new
+                {
+                    totalBooks = books.Count(),
+                    availableBooks = books.Count(b => b.AvailableCopies > 0),
+                    borrowedBooks = books.Sum(b => b.TotalCopies - b.AvailableCopies),
+                    overdueBooks = overdueBooks.Count(),
+                    totalCopies = books.Sum(b => b.TotalCopies),
+                    availableCopies = books.Sum(b => b.AvailableCopies),
+                    mostPopularGenre = books
+                        .GroupBy(b => b.Genre ?? "Uncategorized")
+                        .OrderByDescending(g => g.Count())
+                        .FirstOrDefault()?.Key ?? "N/A",
+                    averageCopiesPerBook = books.Any() ? books.Average(b => b.TotalCopies) : 0
+                };
+
+                return ApiResponse<object>.SuccessResponse(statistics, "Book statistics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving book statistics");
+                return ApiResponse<object>.ErrorResponse("Failed to retrieve book statistics", 500);
+            }
+        }
     }
 }

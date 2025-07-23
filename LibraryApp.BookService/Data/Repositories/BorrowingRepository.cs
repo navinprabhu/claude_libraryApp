@@ -145,6 +145,14 @@ namespace LibraryApp.BookService.Data.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<BorrowingRecord>> GetRecentBorrowingsAsync(int limit = 10)
+        {
+            return await DbSet
+                .OrderByDescending(b => b.BorrowedAt)
+                .Take(limit)
+                .ToListAsync();
+        }
+
         public async Task<BorrowingRecord> CreateAsync(BorrowingRecord borrowingRecord)
         {
             return await AddAsync(borrowingRecord);

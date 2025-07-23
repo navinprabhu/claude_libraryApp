@@ -247,6 +247,30 @@ namespace LibraryApp.BookService.Controllers
             }
         }
 
+        /// <summary>
+        /// Get recent transactions for dashboard
+        /// </summary>
+        [HttpGet("recent")]
+        [AuthorizeRoles(UserRoles.Admin)]
+        public async Task<IActionResult> GetRecentTransactions([FromQuery] int limit = 10)
+        {
+            if (limit < 1 || limit > 50) limit = 10;
+            
+            var result = await _borrowingService.GetRecentTransactionsAsync(limit);
+            return StatusCode(result.StatusCode, result);
+        }
+
+        /// <summary>
+        /// Get borrowing statistics for dashboard
+        /// </summary>
+        [HttpGet("statistics")]
+        [AuthorizeRoles(UserRoles.Admin)]
+        public async Task<IActionResult> GetBorrowingStatistics()
+        {
+            var result = await _borrowingService.GetBorrowingStatisticsAsync();
+            return StatusCode(result.StatusCode, result);
+        }
+
         private string GetCurrentUsername()
         {
             return User.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";

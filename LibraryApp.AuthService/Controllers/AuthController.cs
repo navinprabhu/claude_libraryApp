@@ -182,6 +182,30 @@ namespace LibraryApp.AuthService.Controllers
         }
 
         /// <summary>
+        /// Get user permissions based on role
+        /// </summary>
+        /// <returns>User permissions list</returns>
+        [HttpGet("permissions")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+        public IActionResult GetUserPermissions()
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "Member";
+            var permissions = User.FindAll("permission").Select(c => c.Value).ToList();
+            
+            var permissionInfo = new
+            {
+                role = role,
+                permissions = permissions,
+                hasAdminAccess = role == UserRoles.Admin,
+                hasDashboardAccess = permissions.Contains("dashboard:view") || permissions.Contains("dashboard:view-personal")
+            };
+
+            return Ok(ApiResponse<object>.SuccessResponse(permissionInfo, "Permissions retrieved successfully"));
+        }
+
+        /// <summary>
         /// Health check endpoint
         /// </summary>
         /// <returns>Service health status</returns>

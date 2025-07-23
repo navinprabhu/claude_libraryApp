@@ -278,6 +278,41 @@ namespace LibraryApp.MemberService.Controllers
             }
         }
 
+        /// <summary>
+        /// Get member statistics for dashboard
+        /// </summary>
+        [HttpGet("statistics")]
+        [AuthorizeRoles(UserRoles.Admin)]
+        public async Task<IActionResult> GetMemberStatistics()
+        {
+            var result = await _memberService.GetMemberStatisticsAsync();
+            return StatusCode(result.StatusCode, result);
+        }
+
+        /// <summary>
+        /// Get active members list
+        /// </summary>
+        [HttpGet("active")]
+        [AuthorizeRoles(UserRoles.Admin)]
+        public async Task<IActionResult> GetActiveMembers()
+        {
+            var result = await _memberService.GetActiveMembersAsync();
+            return StatusCode(result.StatusCode, result);
+        }
+
+        /// <summary>
+        /// Get top borrowers for dashboard
+        /// </summary>
+        [HttpGet("top-borrowers")]
+        [AuthorizeRoles(UserRoles.Admin)]
+        public async Task<IActionResult> GetTopBorrowers([FromQuery] int limit = 5)
+        {
+            if (limit < 1 || limit > 20) limit = 5;
+            
+            var result = await _memberService.GetTopBorrowersAsync(limit);
+            return StatusCode(result.StatusCode, result);
+        }
+
         private string? GetCurrentUsername()
         {
             return User.FindFirst(ClaimTypes.Name)?.Value;

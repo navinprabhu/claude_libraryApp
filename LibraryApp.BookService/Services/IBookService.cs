@@ -19,5 +19,9 @@ namespace LibraryApp.BookService.Services
         Task<ApiResponse<bool>> DeleteBookAsync(int id, string deletedBy);
         Task<ApiResponse<bool>> CheckAvailabilityAsync(int bookId);
         Task<ApiResponse<IEnumerable<BookDto>>> GetOverdueBooksAsync();
+        
+        // Dashboard and Statistics APIs
+        Task<ApiResponse<IEnumerable<object>>> GetBookCategoriesAsync();
+        Task<ApiResponse<object>> GetBookStatisticsAsync();
     }
 }

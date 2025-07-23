@@ -105,13 +105,16 @@ Response: {
 - **Member Service (5003)**: CRUD, borrowing eligibility available
 - **Databases**: PostgreSQL instances healthy
 
-### ✅ Completed
+### ✅ Completed (Phase 2 & 3)
 - **API Gateway aggregation endpoints** - DashboardController implemented
 - **CORS configuration for React** - Configured for localhost:3000/3001
 - **Dashboard statistics implementation** - All 5 endpoints implemented
+- **Books Service enhanced** - Categories and statistics endpoints added
+- **Members Service enhanced** - Statistics, active members, top borrowers endpoints added
+- **Borrowings Service enhanced** - Recent transactions and statistics endpoints added
 
 ### 🔄 In Progress  
-- **Docker build/restart** - API Gateway rebuild in progress
+- **Phase 4: Authentication service enhancements**
 
 ### ⚠️ Gateway Issues
 - API Gateway health endpoint not responding
@@ -141,14 +144,36 @@ Will configure in API Gateway for React development server:
 }
 ```
 
+## NEWLY ADDED SERVICE ENDPOINTS (Phase 3)
+
+### Book Service Enhancements
+```
+GET /api/books/categories - Category breakdown with counts
+GET /api/books/statistics - Comprehensive book statistics
+```
+
+### Member Service Enhancements  
+```
+GET /api/members/statistics - Member demographics and activity
+GET /api/members/active - Active members list
+GET /api/members/top-borrowers?limit=5 - Most active borrowers
+```
+
+### Borrowing Service Enhancements
+```
+GET /api/borrowings/recent?limit=10 - Recent transactions
+GET /api/borrowings/statistics - Borrowing patterns and metrics
+```
+
 ## NEXT STEPS
 
 1. ✅ Fix API Gateway startup issues - Removed QoS config
-2. ✅ Implement dashboard aggregation endpoints - All 5 endpoints ready
+2. ✅ Implement dashboard aggregation endpoints - All 5 endpoints ready  
 3. ✅ Configure CORS for React integration - CORS policy updated
-4. 🔄 Test dashboard endpoints after Docker rebuild
-5. ⏳ Create comprehensive seed data
-6. ⏳ Document all APIs in Swagger
+4. ✅ Enhance individual service APIs - All statistics endpoints added
+5. 🔄 **Phase 4: Authentication service enhancements**
+6. ⏳ Create comprehensive seed data
+7. ⏳ Document all APIs in Swagger
 
 ---
 **FINAL STATUS**: ✅ COMPLETE & MERGED TO MAIN  

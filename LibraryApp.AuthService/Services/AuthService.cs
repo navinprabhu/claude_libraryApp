@@ -178,16 +178,16 @@ namespace LibraryApp.AuthService.Services
                     return ApiResponse<object>.ErrorResponse("User not found", 404);
                 }
 
-                var userInfo = new
+                var userInfo = new UserProfile
                 {
-                    user.Id,
-                    user.Username,
-                    user.Email,
-                    user.Role,
-                    user.IsActive,
-                    user.CreatedAt,
-                    user.LastLoginAt,
-                    Claims = principal.Claims.Select(c => new { c.Type, c.Value }).ToList()
+                    Id = user.Id,
+                    Username = user.Username,
+                    Email = user.Email,
+                    Role = user.Role,
+                    FirstName = user.FirstName ?? string.Empty,
+                    LastName = user.LastName ?? string.Empty,
+                    LastLoginAt = user.LastLoginAt ?? DateTime.MinValue,
+                    IsActive = user.IsActive
                 };
 
                 return ApiResponse<object>.SuccessResponse(userInfo, "User information retrieved successfully");

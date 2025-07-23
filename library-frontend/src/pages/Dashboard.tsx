@@ -1,107 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { Grid, Box, Typography, Alert } from '@mui/material';
-import {
-  DashboardStats as DashboardStatsType,
-  Transaction,
-  BookCategory,
-  TopMember,
-  Alert as AlertType,
-} from '../types';
-import apiClient from '../services/api';
+import React from 'react';
+import { Grid, Box, Typography, Alert, Button, Fab } from '@mui/material';
+import { Refresh as RefreshIcon } from '@mui/icons-material';
+import { useDashboardData } from '../hooks/useDashboardData';
 import DashboardStats from '../components/dashboard/DashboardStats';
 import RecentTransactions from '../components/dashboard/RecentTransactions';
 import BookCategories from '../components/dashboard/BookCategories';
 import TopMembers from '../components/dashboard/TopMembers';
 import AlertsPanel from '../components/dashboard/AlertsPanel';
+import LibraryStatisticsChart from '../components/dashboard/LibraryStatisticsChart';
 
 export const Dashboard: React.FC = () => {
-  const [stats, setStats] = useState<DashboardStatsType | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<BookCategory[]>([]);
-  const [topMembers, setTopMembers] = useState<TopMember[]>([]);
-  const [alerts, setAlerts] = useState<AlertType[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    stats,
+    transactions,
+    categories,
+    members,
+    alerts,
+    isLoading,
+    hasError,
+    refetchAll,
+  } = useDashboardData();
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch all dashboard data in parallel
-        const [
-          statsResponse,
-          transactionsResponse,
-          categoriesResponse,
-          membersResponse,
-          alertsResponse,
-        ] = await Promise.allSettled([
-          apiClient.getDashboardStats(),
-          apiClient.getRecentTransactions(10),
-          apiClient.getBookCategories(),
-          apiClient.getTopMembers(5),
-          apiClient.getAlerts(),
-        ]);
-
-        // Handle stats
-        if (statsResponse.status === 'fulfilled') {
-          setStats(statsResponse.value);
-        } else {
-          console.error('Failed to fetch stats:', statsResponse.reason);
-        }
-
-        // Handle transactions
-        if (transactionsResponse.status === 'fulfilled') {
-          setTransactions(transactionsResponse.value);
-        } else {
-          console.error('Failed to fetch transactions:', transactionsResponse.reason);
-        }
-
-        // Handle categories
-        if (categoriesResponse.status === 'fulfilled') {
-          setCategories(categoriesResponse.value);
-        } else {
-          console.error('Failed to fetch categories:', categoriesResponse.reason);
-        }
-
-        // Handle top members
-        if (membersResponse.status === 'fulfilled') {
-          setTopMembers(membersResponse.value);
-        } else {
-          console.error('Failed to fetch top members:', membersResponse.reason);
-        }
-
-        // Handle alerts
-        if (alertsResponse.status === 'fulfilled') {
-          setAlerts(alertsResponse.value);
-        } else {
-          console.error('Failed to fetch alerts:', alertsResponse.reason);
-        }
-
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, []);
-
-  // Show error if all API calls failed
-  if (error && !loading) {
+  // Show error if critical data fails to load
+  if (hasError && !isLoading) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3 }}
+          action={
+            <Button color="inherit" size="small" onClick={refetchAll}>
+              Retry
+            </Button>
+          }
+        >
+          Failed to load dashboard data. Please check your connection and try again.
         </Alert>
         <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
           Dashboard
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Unable to load dashboard data. Please check your connection and try again.
+          Some dashboard data may be unavailable. Click retry to reload.
         </Typography>
       </Box>
     );
@@ -109,58 +48,66 @@ export const Dashboard: React.FC = () => {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600, mb: 4 }}>
-        Dashboard
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
+          Dashboard
+        </Typography>
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={refetchAll}
+          size="small"
+        >
+          Refresh
+        </Button>
+      </Box>
 
       {/* Statistics Cards */}
-      <DashboardStats stats={stats} isLoading={loading} />
+      <DashboardStats stats={stats.data} isLoading={stats.isLoading} />
 
       {/* Middle Section - Transactions and Categories */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} lg={8}>
           <RecentTransactions 
-            transactions={transactions} 
-            isLoading={loading}
+            transactions={transactions.data} 
+            isLoading={transactions.isLoading}
             onViewAll={() => console.log('View all transactions')}
           />
         </Grid>
         <Grid item xs={12} lg={4}>
-          <BookCategories categories={categories} isLoading={loading} />
+          <BookCategories categories={categories.data} isLoading={categories.isLoading} />
         </Grid>
       </Grid>
 
       {/* Bottom Section - Members, Statistics, Alerts */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={6} lg={4}>
-          <TopMembers members={topMembers} isLoading={loading} />
+          <TopMembers members={members.data} isLoading={members.isLoading} />
         </Grid>
         
         <Grid item xs={12} md={6} lg={4}>
-          {/* Placeholder for Library Statistics Chart */}
-          <Box 
-            sx={{ 
-              height: 300, 
-              border: '2px dashed #e0e0e0', 
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: '#fafafa'
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Library Statistics Chart
-              <br />
-              (Coming Soon)
-            </Typography>
-          </Box>
+          <LibraryStatisticsChart isLoading={isLoading} />
         </Grid>
         
         <Grid item xs={12} md={12} lg={4}>
-          <AlertsPanel alerts={alerts} isLoading={loading} />
+          <AlertsPanel alerts={alerts.data} isLoading={alerts.isLoading} />
         </Grid>
       </Grid>
+
+      {/* Floating Action Button for Quick Refresh */}
+      <Fab
+        color="primary"
+        aria-label="refresh"
+        onClick={refetchAll}
+        sx={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          display: { xs: 'flex', sm: 'none' }, // Only show on mobile
+        }}
+      >
+        <RefreshIcon />
+      </Fab>
     </Box>
   );
 };

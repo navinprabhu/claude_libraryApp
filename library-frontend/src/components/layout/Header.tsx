@@ -9,17 +9,15 @@ import {
   Menu,
   MenuItem,
   Avatar,
-  InputBase,
-  Paper,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
-  Search as SearchIcon,
   Notifications,
   Message,
   AccountCircle,
   Logout,
 } from '@mui/icons-material';
+import GlobalSearch from '../common/GlobalSearch';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface HeaderProps {
@@ -68,27 +66,10 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             <MenuIcon />
           </IconButton>
 
-          <Paper
-            component="form"
-            sx={{
-              p: '2px 4px',
-              display: 'flex',
-              alignItems: 'center',
-              width: { xs: 200, sm: 400 },
-              bgcolor: '#f5f5f5',
-              boxShadow: 'none',
-              border: '1px solid #e0e0e0',
-            }}
-          >
-            <IconButton sx={{ p: '10px' }} aria-label="search">
-              <SearchIcon />
-            </IconButton>
-            <InputBase
-              sx={{ ml: 1, flex: 1 }}
-              placeholder="Search books, members..."
-              inputProps={{ 'aria-label': 'search' }}
-            />
-          </Paper>
+          <GlobalSearch 
+            placeholder="Search books, members..." 
+            width={{ xs: 200, sm: 400 }}
+          />
         </Box>
 
         {/* Right Section - Notifications & Profile */}

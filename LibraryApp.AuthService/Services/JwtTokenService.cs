@@ -158,8 +158,18 @@ namespace LibraryApp.AuthService.Services
                 Token = token,
                 RefreshToken = refreshToken,
                 Expiration = expiration,
-                Username = user.Username,
-                Role = user.Role,
+                ExpiresIn = _jwtSettings.ExpirationMinutes * 60, // Convert to seconds
+                User = new UserProfile
+                {
+                    Id = user.Id,
+                    Username = user.Username,
+                    Email = user.Email,
+                    Role = user.Role,
+                    FirstName = user.FirstName ?? string.Empty,
+                    LastName = user.LastName ?? string.Empty,
+                    LastLoginAt = user.LastLoginAt,
+                    IsActive = user.IsActive
+                },
                 Permissions = permissions
             };
         }
@@ -170,16 +180,27 @@ namespace LibraryApp.AuthService.Services
             {
                 UserRoles.Admin => new List<string>
                 {
-                    "books:read", "books:write", "books:delete",
-                    "members:read", "members:write", "members:delete",
-                    "borrowing:read", "borrowing:write", "borrowing:delete",
-                    "system:admin"
+                    // Full dashboard access
+                    "dashboard:view", "dashboard:stats", "dashboard:reports",
+                    // Books management
+                    "books:read", "books:write", "books:delete", "books:categories", "books:statistics",
+                    // Members management  
+                    "members:read", "members:write", "members:delete", "members:statistics", "members:active",
+                    // Borrowing management
+                    "borrowing:read", "borrowing:write", "borrowing:delete", "borrowing:statistics", "borrowing:recent",
+                    // System administration
+                    "system:admin", "system:reports", "system:alerts"
                 },
                 UserRoles.Member => new List<string>
                 {
-                    "books:read",
+                    // Limited dashboard access
+                    "dashboard:view-personal",
+                    // Books browsing
+                    "books:read", "books:search", "books:availability",
+                    // Own profile management
                     "members:read-own", "members:write-own",
-                    "borrowing:read-own", "borrowing:write-own"
+                    // Own borrowing management
+                    "borrowing:read-own", "borrowing:write-own", "borrowing:history-own"
                 },
                 _ => new List<string>()
             };

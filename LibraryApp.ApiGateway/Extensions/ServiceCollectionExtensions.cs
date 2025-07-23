@@ -62,9 +62,10 @@ namespace LibraryApp.ApiGateway.Extensions
                 options.AddPolicy("ApiGatewayPolicy", builder =>
                 {
                     builder
-                        .AllowAnyOrigin()
+                        .WithOrigins("http://localhost:3000", "http://localhost:3001") // React dev servers
                         .AllowAnyMethod()
                         .AllowAnyHeader()
+                        .AllowCredentials()
                         .WithExposedHeaders("X-Correlation-ID");
                 });
             });
@@ -75,6 +76,9 @@ namespace LibraryApp.ApiGateway.Extensions
 
             // Add Controllers for health endpoints
             services.AddControllers();
+
+            // Add HttpClient for dashboard aggregation
+            services.AddHttpClient();
 
             return services;
         }

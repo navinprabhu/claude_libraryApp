@@ -45,18 +45,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const response = await apiClient.login(credentials);
       
+      console.log('Auth service response:', response);
+      
       if (response.success && response.data) {
-        const { token: newToken, user: userData } = response.data;
+        const { token: newToken, username, role } = response.data;
+        
+        // Create user object from auth service response
+        const userData: User = {
+          id: 1, // Auth service doesn't return ID, using default
+          username,
+          email: `${username}@libraryapp.com`, // Auth service doesn't return email, using default
+          role
+        };
+        
+        console.log('Setting token and user:', { token: newToken, user: userData });
         
         setToken(newToken);
         setUser(userData);
         
         localStorage.setItem('auth_token', newToken);
         localStorage.setItem('user', JSON.stringify(userData));
+        
+        console.log('Authentication state updated successfully');
       } else {
         throw new Error(response.message || 'Login failed');
       }
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -70,12 +85,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('user');
   };
 
+  const isAuthenticated = !!token && !!user;
+  
+  console.log('Auth state:', { user: !!user, token: !!token, isAuthenticated, isLoading });
+
   const value: AuthContextType = {
     user,
     token,
     login,
     logout,
-    isAuthenticated: !!token && !!user,
+    isAuthenticated,
     isLoading,
   };
 

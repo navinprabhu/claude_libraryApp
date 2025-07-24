@@ -14,11 +14,15 @@ export interface LoginResponse {
   success: boolean;
   data: {
     token: string;
-    user: User;
-    expiresIn: number;
+    refreshToken: string;
+    expiration: string;
+    username: string;
+    role: string;
+    permissions: string[];
   };
   message?: string;
   errors?: string[];
+  statusCode: number;
 }
 
 export interface AuthContextType {

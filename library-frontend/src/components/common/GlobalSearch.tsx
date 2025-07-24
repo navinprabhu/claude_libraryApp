@@ -7,6 +7,7 @@ import {
   ClickAwayListener,
   List,
   ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   Typography,
@@ -182,16 +183,17 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
                     </Box>
                     <List dense>
                       {suggestions.map((suggestion, index) => (
-                        <ListItem
-                          key={index}
-                          button
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          sx={{ py: 0.5 }}
-                        >
-                          <ListItemText 
-                            primary={suggestion}
-                            primaryTypographyProps={{ variant: 'body2' }}
-                          />
+                        <ListItem disablePadding>
+                          <ListItemButton
+                            key={index}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            sx={{ py: 0.5 }}
+                          >
+                            <ListItemText 
+                              primary={suggestion}
+                              primaryTypographyProps={{ variant: 'body2' }}
+                            />
+                          </ListItemButton>
                         </ListItem>
                       ))}
                     </List>
@@ -211,9 +213,9 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
                         <List dense>
                           {results.map((result, index) => (
                             <React.Fragment key={result.id}>
-                              <ListItem
-                                button
-                                onClick={() => handleResultClick(result)}
+                              <ListItem disablePadding>
+                                <ListItemButton
+                                  onClick={() => handleResultClick(result)}
                                 sx={{ 
                                   py: 1,
                                   '&:hover': { bgcolor: 'action.hover' }
@@ -258,6 +260,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
                                     </Box>
                                   }
                                 />
+                                </ListItemButton>
                               </ListItem>
                               {index < results.length - 1 && <Divider />}
                             </React.Fragment>

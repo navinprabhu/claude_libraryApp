@@ -96,8 +96,7 @@ class ApiClient {
       booksBorrowed: 6,
       totalMembers: 15,
       activeMembers: 12,
-      overdueBooks: 3,
-      lastUpdated: new Date().toISOString()
+      overdueBooks: 3
     };
   }
 

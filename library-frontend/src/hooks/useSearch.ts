@@ -85,12 +85,12 @@ export const useSearch = (): SearchHookResult => {
     isLoading,
     isError,
     error,
-  } = useQuery({
+  } = useQuery<SearchResult[]>({
     queryKey: ['search', query],
     queryFn: () => performSearch(query),
     enabled: query.trim().length >= 2, // Only search if query is 2+ characters
     staleTime: 30 * 1000, // 30 seconds
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const clearSearch = useCallback(() => {

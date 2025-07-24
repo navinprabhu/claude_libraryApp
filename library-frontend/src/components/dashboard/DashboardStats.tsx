@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Box, Typography } from '@mui/material';
+import { Grid2 as Grid, Box, Typography } from '@mui/material';
 import { DashboardStats as DashboardStatsType } from '../../types';
 import StatCard from './StatCard';
 
@@ -62,7 +62,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, isLoading
       
       <Grid container spacing={3}>
         {statsCards.map((card) => (
-          <Grid item xs={12} sm={6} md={4} key={card.testId}>
+          <Grid xs={12} sm={6} md={4} key={card.testId}>
             <div data-cy={card.testId}>
               <StatCard
                 title={card.title}

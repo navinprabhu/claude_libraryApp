@@ -66,10 +66,12 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             <MenuIcon />
           </IconButton>
 
-          <GlobalSearch 
-            placeholder="Search books, members..." 
-            width={{ xs: 200, sm: 400 }}
-          />
+          <Box sx={{ width: { xs: 200, sm: 400 } }}>
+            <GlobalSearch 
+              placeholder="Search books, members..." 
+              width="100%"
+            />
+          </Box>
         </Box>
 
         {/* Right Section - Notifications & Profile */}

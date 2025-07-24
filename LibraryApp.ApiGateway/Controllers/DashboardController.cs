@@ -57,7 +57,7 @@ namespace LibraryApp.ApiGateway.Controllers
                     booksBorrowed = bookStats.totalBooks - bookStats.availableBooks,
                     totalMembers = memberStats.totalMembers,
                     activeMembers = memberStats.activeMembers,
-                    overdueBooks = overdueStats.overdueCount,
+                    overdueBooks = overdueStats,
                     lastUpdated = DateTime.UtcNow
                 };
 
@@ -261,14 +261,14 @@ namespace LibraryApp.ApiGateway.Controllers
                 
                 var alerts = new List<object>();
 
-                if (overdueStats.overdueCount > 0)
+                if (overdueStats > 0)
                 {
                     alerts.Add(new
                     {
                         id = 1,
                         type = "overdue",
-                        message = $"{overdueStats.overdueCount} books are overdue",
-                        severity = overdueStats.overdueCount > 5 ? "error" : "warning",
+                        message = $"{overdueStats} books are overdue",
+                        severity = overdueStats > 5 ? "error" : "warning",
                         timestamp = DateTime.UtcNow
                     });
                 }
@@ -335,17 +335,18 @@ namespace LibraryApp.ApiGateway.Controllers
             }
         }
 
-        private async Task<(int overdueCount)> GetOverdueStatsAsync(string bookServiceUrl, string correlationId)
+        private async Task<int> GetOverdueStatsAsync(string bookServiceUrl, string correlationId)
         {
             try
             {
                 // Mock for now - would call actual overdue books endpoint
-                return (overdueCount: 3);
+                // Fixed tuple syntax error
+                return 3;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching overdue stats - CorrelationId: {CorrelationId}", correlationId);
-                return (0);
+                return 0;
             }
         }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Box, Typography, Alert, Button, Fab } from '@mui/material';
+import { Box, Typography, Alert, Button, Fab } from '@mui/material';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { useDashboardData } from '../hooks/useDashboardData';
 import DashboardStats from '../components/dashboard/DashboardStats';
@@ -63,36 +63,43 @@ export const Dashboard: React.FC = () => {
       </Box>
 
       {/* Statistics Cards */}
-      <DashboardStats stats={stats.data} isLoading={stats.isLoading} />
+      <DashboardStats stats={stats.data || null} isLoading={stats.isLoading} />
 
       {/* Middle Section - Transactions and Categories */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} lg={8}>
-          <RecentTransactions 
-            transactions={transactions.data} 
-            isLoading={transactions.isLoading}
-            onViewAll={() => console.log('View all transactions')}
-          />
-        </Grid>
-        <Grid item xs={12} lg={4}>
-          <BookCategories categories={categories.data} isLoading={categories.isLoading} />
-        </Grid>
-      </Grid>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' },
+          gap: 3,
+          mb: 4
+        }}
+      >
+        <RecentTransactions 
+          transactions={transactions.data} 
+          isLoading={transactions.isLoading}
+          onViewAll={() => console.log('View all transactions')}
+        />
+        <BookCategories categories={categories.data} isLoading={categories.isLoading} />
+      </Box>
 
       {/* Bottom Section - Members, Statistics, Alerts */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6} lg={4}>
-          <TopMembers members={members.data} isLoading={members.isLoading} />
-        </Grid>
-        
-        <Grid item xs={12} md={6} lg={4}>
-          <LibraryStatisticsChart isLoading={isLoading} />
-        </Grid>
-        
-        <Grid item xs={12} md={12} lg={4}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            md: 'repeat(2, 1fr)',
+            lg: 'repeat(3, 1fr)'
+          },
+          gap: 3
+        }}
+      >
+        <TopMembers members={members.data} isLoading={members.isLoading} />
+        <LibraryStatisticsChart isLoading={isLoading} />
+        <Box sx={{ gridColumn: { xs: '1', md: '1 / -1', lg: 'auto' } }}>
           <AlertsPanel alerts={alerts.data} isLoading={alerts.isLoading} />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Floating Action Button for Quick Refresh */}
       <Fab

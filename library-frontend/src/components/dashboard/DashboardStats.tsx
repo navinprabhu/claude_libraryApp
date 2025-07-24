@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid2 as Grid, Box, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { DashboardStats as DashboardStatsType } from '../../types';
 import StatCard from './StatCard';
 
@@ -60,9 +60,19 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, isLoading
         Library Statistics
       </Typography>
       
-      <Grid container spacing={3}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, 1fr)',
+            md: 'repeat(4, 1fr)'
+          },
+          gap: 3
+        }}
+      >
         {statsCards.map((card) => (
-          <Grid xs={12} sm={6} md={4} key={card.testId}>
+          <Box key={card.testId}>
             <div data-cy={card.testId}>
               <StatCard
                 title={card.title}
@@ -72,9 +82,9 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, isLoading
                 isLoading={isLoading}
               />
             </div>
-          </Grid>
+          </Box>
         ))}
-      </Grid>
+      </Box>
     </Box>
   );
 };

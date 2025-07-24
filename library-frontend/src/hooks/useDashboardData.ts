@@ -24,7 +24,7 @@ export const useDashboardStats = (options?: UseQueryOptions<DashboardStats>) => 
     queryKey: dashboardKeys.stats(),
     queryFn: () => apiClient.getDashboardStats(),
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
@@ -41,7 +41,7 @@ export const useRecentTransactions = (
     queryKey: dashboardKeys.transactions(limit),
     queryFn: () => apiClient.getRecentTransactions(limit),
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     retry: 3,
     ...options,
@@ -54,7 +54,7 @@ export const useBookCategories = (options?: UseQueryOptions<BookCategory[]>) => 
     queryKey: dashboardKeys.categories(),
     queryFn: () => apiClient.getBookCategories(),
     staleTime: 10 * 60 * 1000, // 10 minutes
-    cacheTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
     refetchOnWindowFocus: false,
     retry: 3,
     ...options,
@@ -70,7 +70,7 @@ export const useTopMembers = (
     queryKey: dashboardKeys.topMembers(limit),
     queryFn: () => apiClient.getTopMembers(limit),
     staleTime: 15 * 60 * 1000, // 15 minutes
-    cacheTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
     retry: 3,
     ...options,
@@ -83,7 +83,7 @@ export const useAlerts = (options?: UseQueryOptions<Alert[]>) => {
     queryKey: dashboardKeys.alerts(),
     queryFn: () => apiClient.getAlerts(),
     staleTime: 1 * 60 * 1000, // 1 minute
-    cacheTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: true,
     refetchInterval: 2 * 60 * 1000, // Auto-refetch every 2 minutes
     retry: 3,

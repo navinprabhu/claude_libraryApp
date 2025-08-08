@@ -80,7 +80,7 @@ namespace LibraryApp.ApiGateway.Controllers
         /// </summary>
         [HttpGet("recent-transactions")]
         [Authorize]
-        public async Task<IActionResult> GetRecentTransactions([FromQuery] int limit = 10)
+        public Task<IActionResult> GetRecentTransactions([FromQuery] int limit = 10)
         {
             try
             {
@@ -115,17 +115,17 @@ namespace LibraryApp.ApiGateway.Controllers
                     }
                 }.Take(limit);
 
-                return Ok(new
+                return Task.FromResult<IActionResult>(Ok(new
                 {
                     success = true,
                     data = recentTransactions,
                     correlationId = correlationId
-                });
+                }));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching recent transactions");
-                return StatusCode(500, new { error = "Failed to fetch recent transactions", message = ex.Message });
+                return Task.FromResult<IActionResult>(StatusCode(500, new { error = "Failed to fetch recent transactions", message = ex.Message }));
             }
         }
 
@@ -198,7 +198,7 @@ namespace LibraryApp.ApiGateway.Controllers
         /// </summary>
         [HttpGet("top-members")]
         [Authorize]
-        public async Task<IActionResult> GetTopMembers([FromQuery] int limit = 5)
+        public Task<IActionResult> GetTopMembers([FromQuery] int limit = 5)
         {
             try
             {
@@ -228,17 +228,17 @@ namespace LibraryApp.ApiGateway.Controllers
                     }
                 }.Take(limit);
 
-                return Ok(new
+                return Task.FromResult<IActionResult>(Ok(new
                 {
                     success = true,
                     data = topMembers,
                     correlationId = correlationId
-                });
+                }));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching top members");
-                return StatusCode(500, new { error = "Failed to fetch top members", message = ex.Message });
+                return Task.FromResult<IActionResult>(StatusCode(500, new { error = "Failed to fetch top members", message = ex.Message }));
             }
         }
 
@@ -321,32 +321,31 @@ namespace LibraryApp.ApiGateway.Controllers
             }
         }
 
-        private async Task<(int totalMembers, int activeMembers)> GetMemberStatsAsync(string memberServiceUrl, string correlationId)
+        private Task<(int totalMembers, int activeMembers)> GetMemberStatsAsync(string memberServiceUrl, string correlationId)
         {
             try
             {
                 // Mock for now - would call actual member service
-                return (totalMembers: 15, activeMembers: 12);
+                return Task.FromResult((totalMembers: 15, activeMembers: 12));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching member stats - CorrelationId: {CorrelationId}", correlationId);
-                return (0, 0);
+                return Task.FromResult((0, 0));
             }
         }
 
-        private async Task<int> GetOverdueStatsAsync(string bookServiceUrl, string correlationId)
+        private Task<int> GetOverdueStatsAsync(string bookServiceUrl, string correlationId)
         {
             try
             {
                 // Mock for now - would call actual overdue books endpoint
-                // Fixed tuple syntax error
-                return 3;
+                return Task.FromResult(3);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching overdue stats - CorrelationId: {CorrelationId}", correlationId);
-                return 0;
+                return Task.FromResult(0);
             }
         }
 

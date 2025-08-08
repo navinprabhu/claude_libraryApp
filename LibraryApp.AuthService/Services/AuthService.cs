@@ -69,14 +69,14 @@ namespace LibraryApp.AuthService.Services
             }
         }
 
-        public async Task<ApiResponse<TokenValidationResponse>> ValidateTokenAsync(string token)
+        public Task<ApiResponse<TokenValidationResponse>> ValidateTokenAsync(string token)
         {
             try
             {
                 var principal = _jwtTokenService.ValidateToken(token);
                 if (principal == null)
                 {
-                    return ApiResponse<TokenValidationResponse>.ErrorResponse("Invalid token", 401);
+                    return Task.FromResult(ApiResponse<TokenValidationResponse>.ErrorResponse("Invalid token", 401));
                 }
 
                 var username = principal.FindFirst(ClaimTypes.Name)?.Value;
@@ -101,12 +101,12 @@ namespace LibraryApp.AuthService.Services
                     Message = "Token is valid"
                 };
 
-                return ApiResponse<TokenValidationResponse>.SuccessResponse(response, "Token validated successfully");
+                return Task.FromResult(ApiResponse<TokenValidationResponse>.SuccessResponse(response, "Token validated successfully"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error validating token");
-                return ApiResponse<TokenValidationResponse>.ErrorResponse("Token validation failed", 500);
+                return Task.FromResult(ApiResponse<TokenValidationResponse>.ErrorResponse("Token validation failed", 500));
             }
         }
 

@@ -513,17 +513,47 @@ jobs:
       - name: Start services with Docker Compose
         run: |
           # Build and start all services (CI uses production config, not development overrides)
+          echo "Starting Docker Compose services..."
           if docker compose version &> /dev/null; then
             docker compose -f docker-compose.yml up -d --build
           else
             docker-compose -f docker-compose.yml up -d --build
           fi
           
-          # Wait for services to be ready
-          echo "Waiting for services to start..."
-          sleep 30
+          echo "Checking initial container status..."
+          if docker compose version &> /dev/null; then
+            docker compose -f docker-compose.yml ps
+          else
+            docker-compose -f docker-compose.yml ps
+          fi
           
-          # Check service health
+          # Wait longer for databases to initialize
+          echo "Waiting for database initialization (60s)..."
+          sleep 60
+          
+          # Check container health status
+          echo "Checking container health..."
+          if docker compose version &> /dev/null; then
+            docker compose -f docker-compose.yml ps
+          else
+            docker-compose -f docker-compose.yml ps
+          fi
+          
+          # Check database containers first
+          echo "Checking database containers..."
+          for db_service in auth-db book-db member-db redis; do
+            echo "Checking $db_service container..."
+            if docker ps | grep "libraryapp-$db_service" | grep -q "healthy\|Up"; then
+              echo "✅ $db_service container is running"
+            else
+              echo "❌ $db_service container failed - checking logs..."
+              docker logs "libraryapp-$db_service" | tail -20
+              echo "Container status:"
+              docker ps -a | grep "libraryapp-$db_service"
+            fi
+          done
+          
+          # Check service health with better error handling
           for service in auth book member gateway; do
             port=$(case $service in
               auth) echo 5001 ;;
@@ -533,14 +563,31 @@ jobs:
             esac)
             
             echo "Checking $service service on port $port..."
-            for i in {1..10}; do
+            healthy=false
+            for i in {1..15}; do
               if curl -f http://localhost:$port/health > /dev/null 2>&1; then
                 echo "✅ $service service is healthy"
+                healthy=true
                 break
               fi
-              echo "Waiting for $service service... ($i/10)"
-              sleep 5
+              echo "Waiting for $service service... ($i/15)"
+              
+              # Show container logs if service is taking too long
+              if [ $i -eq 10 ]; then
+                echo "Service taking too long, checking logs..."
+                docker logs "libraryapp-$service-service" 2>&1 | tail -20 || true
+              fi
+              
+              sleep 10
             done
+            
+            if [ "$healthy" = false ]; then
+              echo "❌ $service service failed to become healthy"
+              echo "Final container status:"
+              docker ps -a | grep "libraryapp-$service"
+              echo "Final service logs:"
+              docker logs "libraryapp-$service-service" 2>&1 | tail -30 || true
+            fi
           done
 
       - name: Run integration tests

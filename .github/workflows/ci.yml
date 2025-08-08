@@ -7,6 +7,14 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+  security-events: write
+  statuses: write
+
 env:
   DOTNET_VERSION: '8.0.x'
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -38,28 +46,40 @@ jobs:
           shared_changed=false
           tests_changed=false
           
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.AuthService/'; then
-            auth_changed=true
-          fi
-          
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.BookService/'; then
-            book_changed=true
-          fi
-          
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.MemberService/'; then
-            member_changed=true
-          fi
-          
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.ApiGateway/'; then
-            gateway_changed=true
-          fi
-          
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.Shared/'; then
-            shared_changed=true
-          fi
-          
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.Tests/'; then
-            tests_changed=true
+          # Handle first push or force push where before might be null
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ] || [ -z "${{ github.event.before }}" ]; then
+            # First push - check all files
+            if ls LibraryApp.AuthService/ >/dev/null 2>&1; then auth_changed=true; fi
+            if ls LibraryApp.BookService/ >/dev/null 2>&1; then book_changed=true; fi
+            if ls LibraryApp.MemberService/ >/dev/null 2>&1; then member_changed=true; fi
+            if ls LibraryApp.ApiGateway/ >/dev/null 2>&1; then gateway_changed=true; fi
+            if ls LibraryApp.Shared*/ >/dev/null 2>&1; then shared_changed=true; fi
+            if ls LibraryApp.Tests/ >/dev/null 2>&1; then tests_changed=true; fi
+          else
+            # Normal diff
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.AuthService/' >/dev/null 2>&1; then
+              auth_changed=true
+            fi
+            
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.BookService/' >/dev/null 2>&1; then
+              book_changed=true
+            fi
+            
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.MemberService/' >/dev/null 2>&1; then
+              member_changed=true
+            fi
+            
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.ApiGateway/' >/dev/null 2>&1; then
+              gateway_changed=true
+            fi
+            
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.Shared' >/dev/null 2>&1; then
+              shared_changed=true
+            fi
+            
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^LibraryApp\.Tests/' >/dev/null 2>&1; then
+              tests_changed=true
+            fi
           fi
           
           # Build services array
@@ -180,10 +200,6 @@ jobs:
     needs: changes
     if: needs.changes.outputs.any_changed == 'true'
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
 
     steps:
       - name: Checkout code
@@ -206,7 +222,7 @@ jobs:
           security-scan LibraryApp.sln --export sarif --output security-results.sarif || true
 
       - name: Upload security scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: security-results.sarif
@@ -322,7 +338,7 @@ jobs:
           output: 'trivy-results-${{ matrix.service }}.sarif'
 
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results-${{ matrix.service }}.sarif'

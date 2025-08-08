@@ -18,6 +18,13 @@ on:
         required: true
         default: 'all'
 
+permissions:
+  contents: read
+  actions: read
+  packages: write
+  deployments: write
+  statuses: write
+
 env:
   REGISTRY: docker.io
   DOTNET_VERSION: '8.0.x'

@@ -199,7 +199,7 @@ namespace LibraryApp.BookService.Services
                     return ApiResponse<BookDto>.ErrorResponse("Book not found", 404);
                 }
 
-                if (updateBookDto.ISBN != existingBook.ISBN && await _bookRepository.ISBNExistsAsync(updateBookDto.ISBN))
+                if (updateBookDto.ISBN != existingBook.ISBN && !string.IsNullOrEmpty(updateBookDto.ISBN) && await _bookRepository.ISBNExistsAsync(updateBookDto.ISBN))
                 {
                     return ApiResponse<BookDto>.ErrorResponse("Book with this ISBN already exists", 400);
                 }

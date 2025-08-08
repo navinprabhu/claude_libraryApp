@@ -437,11 +437,11 @@ jobs:
 
       - name: Start services with Docker Compose
         run: |
-          # Build and start all services (with fallback to legacy syntax)
+          # Build and start all services (CI uses production config, not development overrides)
           if docker compose version &> /dev/null; then
-            docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+            docker compose -f docker-compose.yml up -d --build
           else
-            docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+            docker-compose -f docker-compose.yml up -d --build
           fi
           
           # Wait for services to be ready
@@ -489,18 +489,18 @@ jobs:
         run: |
           echo "=== Service Logs ==="
           if docker compose version &> /dev/null; then
-            docker compose logs
+            docker compose -f docker-compose.yml logs
           else
-            docker-compose logs
+            docker-compose -f docker-compose.yml logs
           fi
 
       - name: Stop services
         if: always()
         run: |
           if docker compose version &> /dev/null; then
-            docker compose down -v
+            docker compose -f docker-compose.yml down -v
           else
-            docker-compose down -v
+            docker-compose -f docker-compose.yml down -v
           fi
 
   # Code quality checks

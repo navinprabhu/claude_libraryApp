@@ -18,6 +18,7 @@ using Xunit;
 
 namespace LibraryApp.Tests.Integration
 {
+    [Trait("Category", "Integration")]
     public class InterServiceCommunicationTests
     {
         private readonly Mock<ILogger<MembersController>> _memberControllerLogger;

@@ -526,7 +526,7 @@ jobs:
         run: |
           dotnet test LibraryApp.Tests/LibraryApp.Tests.csproj \
             --configuration Release \
-            --filter Category=Integration \
+            --filter "Category=Integration" \
             --logger trx \
             --results-directory ./IntegrationTestResults
 

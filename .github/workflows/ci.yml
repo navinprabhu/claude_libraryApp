@@ -366,10 +366,36 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Verify Docker Compose
+        run: |
+          # Check if Docker Compose is available
+          if ! command -v docker &> /dev/null; then
+            echo "Docker is not available"
+            exit 1
+          fi
+          
+          # Check Docker Compose v2
+          if docker compose version &> /dev/null; then
+            echo "✅ Docker Compose v2 is available"
+            docker compose version
+          elif command -v docker-compose &> /dev/null; then
+            echo "⚠️  Using legacy docker-compose"
+            docker-compose --version
+            # Create alias for consistency
+            alias docker-compose='docker compose'
+          else
+            echo "❌ Docker Compose is not available"
+            exit 1
+          fi
+
       - name: Start services with Docker Compose
         run: |
-          # Build and start all services
-          docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+          # Build and start all services (with fallback to legacy syntax)
+          if docker compose version &> /dev/null; then
+            docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+          else
+            docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+          fi
           
           # Wait for services to be ready
           echo "Waiting for services to start..."
@@ -415,11 +441,20 @@ jobs:
         if: failure()
         run: |
           echo "=== Service Logs ==="
-          docker-compose logs
+          if docker compose version &> /dev/null; then
+            docker compose logs
+          else
+            docker-compose logs
+          fi
 
       - name: Stop services
         if: always()
-        run: docker-compose down -v
+        run: |
+          if docker compose version &> /dev/null; then
+            docker compose down -v
+          else
+            docker-compose down -v
+          fi
 
   # Code quality checks
   code-quality:

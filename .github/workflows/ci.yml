@@ -447,10 +447,31 @@ jobs:
           fi
 
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
+        if: env.UPLOAD_SARIF == 'true'
+        run: |
+          echo "Trivy scan completed for ${{ matrix.service }}"
+          echo "SARIF file generated: trivy-results-${{ matrix.service }}.sarif"
+          
+          # Show scan summary
+          if [ -f "trivy-results-${{ matrix.service }}.sarif" ]; then
+            echo "Scan results summary:"
+            if command -v jq >/dev/null 2>&1; then
+              # Extract and display vulnerability counts if available
+              jq -r '.runs[0].results | length' "trivy-results-${{ matrix.service }}.sarif" 2>/dev/null | head -1 || echo "Unable to parse results"
+            fi
+            
+            # Store as artifact instead of uploading to code scanning
+            echo "Storing SARIF results as workflow artifact"
+          fi
+        continue-on-error: true
+        
+      - name: Upload SARIF as artifact
+        uses: actions/upload-artifact@v4
         if: env.UPLOAD_SARIF == 'true'
         with:
-          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+          name: trivy-sarif-${{ matrix.service }}
+          path: trivy-results-${{ matrix.service }}.sarif
+          retention-days: 30
 
   # Integration tests
   integration-tests:

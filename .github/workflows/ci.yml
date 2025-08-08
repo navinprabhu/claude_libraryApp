@@ -385,16 +385,70 @@ jobs:
           fi
 
       - name: Scan Docker image for vulnerabilities
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: ${{ steps.service-vars.outputs.image_name }}:test
           format: 'sarif'
           output: 'trivy-results-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
         continue-on-error: true
+
+      - name: Validate and upload Trivy scan results
+        if: always()
+        run: |
+          SARIF_FILE='trivy-results-${{ matrix.service }}.sarif'
+          
+          if [ -f "$SARIF_FILE" ]; then
+            echo "SARIF file exists: $SARIF_FILE"
+            
+            # Check if file is not empty
+            if [ -s "$SARIF_FILE" ]; then
+              echo "SARIF file has content ($(wc -l < "$SARIF_FILE") lines)"
+              
+              # Validate SARIF format (try jq first, fallback to basic validation)
+              if command -v jq >/dev/null 2>&1; then
+                if jq empty "$SARIF_FILE" 2>/dev/null; then
+                  echo "✅ SARIF file is valid JSON"
+                  
+                  # Check if it has the required SARIF structure
+                  if jq -e '.version and .runs' "$SARIF_FILE" >/dev/null 2>&1; then
+                    echo "✅ SARIF file has required structure"
+                    echo "UPLOAD_SARIF=true" >> $GITHUB_ENV
+                  else
+                    echo "❌ SARIF file missing required structure"
+                    echo "UPLOAD_SARIF=false" >> $GITHUB_ENV
+                  fi
+                else
+                  echo "❌ SARIF file is not valid JSON"
+                  echo "UPLOAD_SARIF=false" >> $GITHUB_ENV
+                fi
+              else
+                # Fallback validation without jq
+                echo "jq not available, using basic validation"
+                if grep -q '"version"' "$SARIF_FILE" && grep -q '"runs"' "$SARIF_FILE"; then
+                  echo "✅ SARIF file appears to have required structure"
+                  echo "UPLOAD_SARIF=true" >> $GITHUB_ENV
+                else
+                  echo "❌ SARIF file missing required fields"
+                  echo "UPLOAD_SARIF=false" >> $GITHUB_ENV
+                fi
+              fi
+              
+              # Show first few lines of SARIF for debugging
+              echo "SARIF file preview:"
+              head -5 "$SARIF_FILE" || true
+            else
+              echo "❌ SARIF file is empty"
+              echo "UPLOAD_SARIF=false" >> $GITHUB_ENV
+            fi
+          else
+            echo "❌ SARIF file not found: $SARIF_FILE"
+            echo "UPLOAD_SARIF=false" >> $GITHUB_ENV
+          fi
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && hashFiles('trivy-results-${{ matrix.service }}.sarif') != ''
+        if: env.UPLOAD_SARIF == 'true'
         with:
           sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
 

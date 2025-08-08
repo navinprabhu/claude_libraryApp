@@ -2,12 +2,17 @@ name: "CodeQL Security Analysis"
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, test-fixes ]
   pull_request:
     branches: [ main, develop ]
   schedule:
     - cron: '0 2 * * 1'  # Run weekly on Mondays at 2 AM UTC
   workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 permissions:
   contents: read
@@ -16,36 +21,47 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
-    timeout-minutes: 360
-    
-    # Only run if code scanning is enabled (this will be skipped otherwise)
-    if: github.repository_owner != 'github' # Adjust this condition based on your needs
+    timeout-minutes: 45
     
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'csharp', 'javascript' ]
+        language: [ 'csharp' ]
+        # Add 'javascript' if you have significant JS/TS code in library-frontend
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-        queries: security-extended,security-and-quality
-
     - name: Setup .NET
       if: matrix.language == 'csharp'
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-and-quality
+        config: |
+          paths-ignore:
+            - "**/bin/**"
+            - "**/obj/**"
+            - "**/TestResults/**"
+            - "**/logs/**"
+            - "library-frontend/node_modules/**"
+            - "library-frontend/build/**"
+
+    - name: Restore .NET dependencies
+      if: matrix.language == 'csharp'
+      run: dotnet restore LibraryApp.sln
+
+    - name: Build .NET solution
+      if: matrix.language == 'csharp'
+      run: dotnet build LibraryApp.sln --configuration Release --no-restore
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3

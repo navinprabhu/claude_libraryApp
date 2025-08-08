@@ -4,6 +4,7 @@ using LibraryApp.Shared.Models.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace LibraryApp.AuthService.Controllers
 {

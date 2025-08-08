@@ -472,7 +472,7 @@ namespace LibraryApp.BookService.Services
                     borrowingsThisMonth = allBorrowings.Count(b => b.BorrowedAt >= DateTime.UtcNow.AddDays(-30)),
                     returnsThisMonth = allBorrowings.Count(b => b.IsReturned && b.ReturnedAt >= DateTime.UtcNow.AddDays(-30)),
                     averageBorrowingPeriod = allBorrowings.Where(b => b.IsReturned && b.ReturnedAt.HasValue)
-                        .Select(b => (b.ReturnedAt.Value - b.BorrowedAt).TotalDays)
+                        .Select(b => (b.ReturnedAt!.Value - b.BorrowedAt).TotalDays)
                         .DefaultIfEmpty(0)
                         .Average()
                 };

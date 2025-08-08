@@ -140,12 +140,23 @@ CREATE TRIGGER update_book_reviews_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Grant permissions to the book user
-GRANT USAGE ON SCHEMA public TO book_user;
-GRANT USAGE ON SCHEMA public TO book_dev_user;
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO book_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO book_dev_user;
-
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO book_user;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO book_dev_user;
+-- Grant permissions to the book user (handle both production and dev users)
+DO $$
+BEGIN
+    -- Grant permissions to book_user (production)
+    IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'book_user') THEN
+        GRANT USAGE ON SCHEMA public TO book_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO book_user;
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO book_user;
+        RAISE NOTICE 'Permissions granted to book_user';
+    END IF;
+    
+    -- Grant permissions to book_dev_user (development)  
+    IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'book_dev_user') THEN
+        GRANT USAGE ON SCHEMA public TO book_dev_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO book_dev_user;
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO book_dev_user;
+        RAISE NOTICE 'Permissions granted to book_dev_user';
+    END IF;
+END
+$$;

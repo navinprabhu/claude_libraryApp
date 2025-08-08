@@ -7,6 +7,7 @@ using System.Text.Json;
 
 namespace LibraryApp.Tests.ApiGateway
 {
+    [Trait("Category", "Integration")]
     public class ApiGatewayIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
     {
         private readonly WebApplicationFactory<Program> _factory;

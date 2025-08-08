@@ -1,0 +1,24 @@
+name: "CodeQL Config"
+
+queries:
+  - uses: security-and-quality
+  - uses: security-extended
+
+paths-ignore:
+  - "**/bin/**"
+  - "**/obj/**"
+  - "**/TestResults/**"
+  - "**/logs/**"
+  - "library-frontend/node_modules/**"
+  - "library-frontend/build/**"
+  - "**/*.generated.cs"
+  - "**/*.designer.cs"
+
+paths:
+  - "LibraryApp.AuthService/**"
+  - "LibraryApp.BookService/**"
+  - "LibraryApp.MemberService/**"
+  - "LibraryApp.ApiGateway/**" 
+  - "LibraryApp.Shared.Models/**"
+  - "LibraryApp.Shared.Infrastructure/**"
+  - "LibraryApp.Shared.Events/**"

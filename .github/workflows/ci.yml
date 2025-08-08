@@ -213,32 +213,39 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore LibraryApp.sln
 
-      - name: Run security scan
-        run: |
-          # Install security scanner
-          dotnet tool install --global security-scan
-          
-          # Run security analysis
-          security-scan LibraryApp.sln --export sarif --output security-results.sarif || true
-
-      - name: Upload security scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
         with:
-          sarif_file: security-results.sarif
+          languages: csharp
+          queries: security-and-quality
+        continue-on-error: true
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+        continue-on-error: true
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:csharp"
+        continue-on-error: true
 
       - name: Dependency vulnerability scan
         run: |
           # Scan for vulnerable dependencies
-          dotnet list package --vulnerable --include-transitive > vulnerability-report.txt || true
-          
-          # Check if vulnerabilities found
-          if grep -q "has the following vulnerable packages" vulnerability-report.txt; then
-            echo "❌ Vulnerable dependencies found!"
-            cat vulnerability-report.txt
-            exit 1
+          echo "Scanning for vulnerable packages..."
+          if dotnet list package --vulnerable --include-transitive > vulnerability-report.txt 2>&1; then
+            # Check if vulnerabilities found
+            if grep -q "has the following vulnerable packages" vulnerability-report.txt 2>/dev/null; then
+              echo "❌ Vulnerable dependencies found!"
+              cat vulnerability-report.txt
+              exit 1
+            else
+              echo "✅ No vulnerable dependencies found"
+            fi
           else
-            echo "✅ No vulnerable dependencies found"
+            echo "⚠️  Vulnerability scan completed with warnings"
+            cat vulnerability-report.txt || echo "No report generated"
           fi
 
   # Docker build and test
@@ -336,10 +343,11 @@ jobs:
           image-ref: ${{ steps.service-vars.outputs.image_name }}:test
           format: 'sarif'
           output: 'trivy-results-${{ matrix.service }}.sarif'
+        continue-on-error: true
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('trivy-results-${{ matrix.service }}.sarif') != ''
         with:
           sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
 

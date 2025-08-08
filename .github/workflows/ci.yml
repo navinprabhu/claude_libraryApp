@@ -83,31 +83,50 @@ jobs:
           fi
           
           # Build services array
-          services="[]"
+          services=""
           if [ "$auth_changed" = true ] || [ "$shared_changed" = true ]; then
-            services=$(echo $services | jq '. + ["auth"]')
+            services="${services}auth,"
           fi
           if [ "$book_changed" = true ] || [ "$shared_changed" = true ]; then
-            services=$(echo $services | jq '. + ["book"]')
+            services="${services}book,"
           fi
           if [ "$member_changed" = true ] || [ "$shared_changed" = true ]; then
-            services=$(echo $services | jq '. + ["member"]')
+            services="${services}member,"
           fi
           if [ "$gateway_changed" = true ] || [ "$shared_changed" = true ]; then
-            services=$(echo $services | jq '. + ["gateway"]')
+            services="${services}gateway,"
+          fi
+          
+          # Convert to JSON array format and debug
+          if [ -n "$services" ]; then
+            # Remove trailing comma and wrap in JSON array
+            services_clean=$(echo "$services" | sed 's/,$//')
+            services="[\"$(echo "$services_clean" | sed 's/,/","/g')\"]"
+          else
+            services="[]"
           fi
           
           # If this is a PR to main or push to main, build all services
           if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            services='["auth", "book", "member", "gateway"]'
+            services='["auth","book","member","gateway"]'
           fi
           
           # If no specific changes detected, build all for safety
           if [ "$services" = "[]" ]; then
-            services='["auth", "book", "member", "gateway"]'
+            services='["auth","book","member","gateway"]'
           fi
           
-          echo "services=$services" >> $GITHUB_OUTPUT
+          echo "Debug: services value = $services"
+          
+          # Validate JSON format before outputting
+          if echo "$services" | python3 -m json.tool >/dev/null 2>&1; then
+            echo "✅ JSON is valid"
+            echo "services=$services" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Invalid JSON format, using fallback"
+            echo 'services=["auth","book","member","gateway"]' >> $GITHUB_OUTPUT
+          fi
+          
           echo "tests=$tests_changed" >> $GITHUB_OUTPUT
           echo "shared=$shared_changed" >> $GITHUB_OUTPUT
           echo "any_changed=true" >> $GITHUB_OUTPUT

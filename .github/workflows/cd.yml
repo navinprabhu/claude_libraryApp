@@ -54,10 +54,16 @@ jobs:
           
           # Determine services to deploy
           if [ "${{ github.event.inputs.services }}" = "all" ] || [ "${{ github.event_name }}" = "release" ]; then
-            services='["auth", "book", "member", "gateway"]'
+            services='["auth","book","member","gateway"]'
           else
-            # Convert comma-separated list to JSON array
-            services=$(echo '${{ github.event.inputs.services }}' | jq -R -s -c 'split(",") | map(select(length > 0))')
+            # Convert comma-separated list to JSON array (simpler approach)
+            input_services="${{ github.event.inputs.services }}"
+            if [ -n "$input_services" ]; then
+              # Replace commas with quotes and wrap in array
+              services="[\"$(echo "$input_services" | sed 's/,/","/g')\"]"
+            else
+              services='["auth","book","member","gateway"]'
+            fi
           fi
           
           # Set registry prefix

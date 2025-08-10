@@ -18,10 +18,10 @@ services:
       - libraryapp-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-auth_user} -d ${AUTH_DB_NAME:-AuthDatabase}"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
     restart: unless-stopped
 
   book-db:
@@ -40,10 +40,10 @@ services:
       - libraryapp-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${BOOK_DB_USER:-book_user} -d ${BOOK_DB_NAME:-BookDatabase}"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
     restart: unless-stopped
 
   member-db:
@@ -62,10 +62,10 @@ services:
       - libraryapp-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${MEMBER_DB_USER:-member_user} -d ${MEMBER_DB_NAME:-MemberDatabase}"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
     restart: unless-stopped
 
   # Redis Cache
@@ -81,9 +81,9 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password123}
 
@@ -113,10 +113,10 @@ services:
       - libraryapp-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 8
-      start_period: 90s
+      interval: 45s
+      timeout: 20s
+      retries: 6
+      start_period: 180s
     restart: unless-stopped
 
   # Book Service
@@ -148,10 +148,10 @@ services:
       - libraryapp-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 8
-      start_period: 90s
+      interval: 45s
+      timeout: 20s
+      retries: 6
+      start_period: 240s
     restart: unless-stopped
 
   # Member Service
@@ -183,10 +183,10 @@ services:
       - libraryapp-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 8
-      start_period: 90s
+      interval: 45s
+      timeout: 20s
+      retries: 6
+      start_period: 300s
     restart: unless-stopped
 
   # API Gateway
@@ -220,10 +220,10 @@ services:
       - libraryapp-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health/gateway"]
-      interval: 15s
-      timeout: 10s
-      retries: 8
-      start_period: 90s
+      interval: 45s
+      timeout: 20s
+      retries: 6
+      start_period: 360s
     restart: unless-stopped
 
 # Networks

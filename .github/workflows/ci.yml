@@ -477,9 +477,10 @@ jobs:
             docker-compose -f docker-compose.yml ps
           fi
           
-          # Wait longer for databases to initialize (increased due to health check improvements)
-          echo "Waiting for database and service initialization (120s)..."
-          sleep 120
+          # Wait for services to initialize (based on longest start_period: 360s for gateway)
+          echo "Waiting for all services to initialize (400s = ~7 minutes)..."
+          echo "This accounts for database startup (120s) + auth service (180s) + dependent services (300s+)"
+          sleep 400
           
           # Check container health status
           echo "Checking container health..."

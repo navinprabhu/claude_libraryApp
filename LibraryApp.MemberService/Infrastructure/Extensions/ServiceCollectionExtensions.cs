@@ -13,18 +13,8 @@ namespace LibraryApp.MemberService.Infrastructure.Extensions
         public static IServiceCollection AddMemberServiceDependencies(this IServiceCollection services, IConfiguration configuration)
         {
             // Add DbContext
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
-            if (!string.IsNullOrEmpty(connectionString))
-            {
-                services.AddDbContext<MemberDbContext>(options =>
-                    options.UseNpgsql(connectionString));
-            }
-            else
-            {
-                // Fallback to InMemory for development/testing
-                services.AddDbContext<MemberDbContext>(options =>
-                    options.UseInMemoryDatabase("MemberServiceDb"));
-            }
+            services.AddDbContext<MemberDbContext>(options =>
+                options.UseInMemoryDatabase("MemberServiceDb"));
 
             // Add repositories
             services.AddScoped<IMemberRepository, MemberRepository>();

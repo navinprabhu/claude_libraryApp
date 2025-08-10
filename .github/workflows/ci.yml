@@ -536,7 +536,13 @@ jobs:
               # Show container logs if service is taking too long
               if [ $i -eq 7 ]; then
                 echo "Service taking too long, checking logs..."
-                docker logs "libraryapp-$service-service" 2>&1 | tail -20 || true
+                container_name=$(case $service in
+                  auth) echo "libraryapp-auth-service" ;;
+                  book) echo "libraryapp-book-service" ;;
+                  member) echo "libraryapp-member-service" ;;
+                  gateway) echo "libraryapp-api-gateway" ;;
+                esac)
+                docker logs "$container_name" 2>&1 | tail -20 || true
               fi
               
               sleep 10
@@ -547,7 +553,13 @@ jobs:
               echo "Final container status:"
               docker ps -a | grep "libraryapp-$service"
               echo "Final service logs:"
-              docker logs "libraryapp-$service-service" 2>&1 | tail -30 || true
+              container_name=$(case $service in
+                auth) echo "libraryapp-auth-service" ;;
+                book) echo "libraryapp-book-service" ;;
+                member) echo "libraryapp-member-service" ;;
+                gateway) echo "libraryapp-api-gateway" ;;
+              esac)
+              docker logs "$container_name" 2>&1 | tail -30 || true
             fi
           done
 

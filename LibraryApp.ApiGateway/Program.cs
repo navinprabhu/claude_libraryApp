@@ -25,9 +25,12 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-// Security middleware
-app.UseHttpsRedirection();
-app.UseHsts();
+// Security middleware (disabled in Development/Docker for health checks)
+if (app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+    app.UseHsts();
+}
 
 // Custom middleware pipeline
 app.UseCorrelationId();
@@ -49,6 +52,10 @@ app.UseAuthorization();
 
 // Health checks endpoint
 app.MapHealthChecks("/health");
+
+// Simple health endpoint for Docker health checks (before complex middleware)
+app.MapGet("/health/simple", () => new { status = "healthy", timestamp = DateTime.UtcNow });
+
 app.MapControllers();
 
 // Add root endpoint with API information

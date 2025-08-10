@@ -425,7 +425,7 @@ jobs:
 
   # Integration tests
   integration-tests:
-    needs: [changes, build-and-test]
+    needs: [changes, build-and-test, docker-build]
     if: needs.changes.outputs.any_changed == 'true'
     runs-on: ubuntu-latest
 
@@ -437,6 +437,16 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Verify Docker images built successfully
+        run: |
+          echo "Integration tests running after docker-build job completion"
+          echo "Docker build status: ${{ needs.docker-build.result }}"
+          if [ "${{ needs.docker-build.result }}" != "success" ]; then
+            echo "❌ Docker build failed, cannot run integration tests"
+            exit 1
+          fi
+          echo "✅ Docker build succeeded, proceeding with integration tests"
 
       - name: Verify Docker Compose
         run: |
@@ -477,10 +487,10 @@ jobs:
             docker-compose -f docker-compose.yml ps
           fi
           
-          # Wait for services to initialize (based on longest start_period: 360s for gateway)
-          echo "Waiting for all services to initialize (400s = ~7 minutes)..."
-          echo "This accounts for database startup (120s) + auth service (180s) + dependent services (300s+)"
-          sleep 400
+          # Wait for services to initialize (Docker images already built and tested)
+          echo "Waiting for services to initialize (240s = ~4 minutes)..."
+          echo "Docker images are pre-built, so focusing on service startup and health checks"
+          sleep 240
           
           # Check container health status
           echo "Checking container health..."

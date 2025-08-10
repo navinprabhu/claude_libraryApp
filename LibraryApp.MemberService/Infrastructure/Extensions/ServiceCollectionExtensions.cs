@@ -13,8 +13,18 @@ namespace LibraryApp.MemberService.Infrastructure.Extensions
         public static IServiceCollection AddMemberServiceDependencies(this IServiceCollection services, IConfiguration configuration)
         {
             // Add DbContext
-            services.AddDbContext<MemberDbContext>(options =>
-                options.UseInMemoryDatabase("MemberServiceDb"));
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            if (!string.IsNullOrEmpty(connectionString))
+            {
+                services.AddDbContext<MemberDbContext>(options =>
+                    options.UseNpgsql(connectionString));
+            }
+            else
+            {
+                // Fallback to InMemory for development/testing
+                services.AddDbContext<MemberDbContext>(options =>
+                    options.UseInMemoryDatabase("MemberServiceDb"));
+            }
 
             // Add repositories
             services.AddScoped<IMemberRepository, MemberRepository>();
@@ -28,18 +38,18 @@ namespace LibraryApp.MemberService.Infrastructure.Extensions
             // Add HTTP clients with Polly policies
             AddHttpClients(services, configuration);
 
-            // Add health checks
+            // Add health checks (removed external service dependency to avoid circular health check issues)
             services.AddHealthChecks()
                 .AddCheck<MemberServiceHealthCheck>("memberservice")
-                .AddCheck<DatabaseHealthCheck>("database")
-                .AddCheck<BookServiceHealthCheck>("bookservice");
+                .AddCheck<DatabaseHealthCheck>("database");
 
             return services;
         }
 
         private static void AddHttpClients(IServiceCollection services, IConfiguration configuration)
         {
-            var bookServiceUrl = configuration.GetValue<string>("ExternalServices:BookService:BaseUrl") 
+            var bookServiceUrl = configuration.GetValue<string>("ServiceUrls:BookService") 
+                ?? configuration.GetValue<string>("ExternalServices:BookService:BaseUrl") 
                 ?? "http://localhost:5002";
 
             services.AddHttpClient<IBookServiceClient, BookServiceClient>(client =>
@@ -47,13 +57,6 @@ namespace LibraryApp.MemberService.Infrastructure.Extensions
                 client.BaseAddress = new Uri(bookServiceUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
                 client.DefaultRequestHeaders.Add("User-Agent", "MemberService/1.0");
-            });
-
-            // Register HttpClient for BookService health checks
-            services.AddHttpClient<BookServiceHealthCheck>(client =>
-            {
-                client.BaseAddress = new Uri(bookServiceUrl);
-                client.Timeout = TimeSpan.FromSeconds(10);
             });
         }
     }

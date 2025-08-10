@@ -25,14 +25,9 @@ namespace LibraryApp.MemberService.Infrastructure.Health
                     ["service"] = "LibraryApp.MemberService"
                 };
 
+                // Simple database connection check without heavy queries
                 await _dbContext.Database.CanConnectAsync(cancellationToken);
                 data["database"] = "Connected";
-
-                var memberCount = await _dbContext.Members.CountAsync(cancellationToken);
-                data["total_members"] = memberCount;
-
-                var activeMembersCount = await _dbContext.Members.CountAsync(m => m.IsActive, cancellationToken);
-                data["active_members"] = activeMembersCount;
 
                 return HealthCheckResult.Healthy("Member service is healthy", data);
             }

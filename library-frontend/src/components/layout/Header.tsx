@@ -55,10 +55,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           sm: 0,
           md: '280px' 
         },
-        bgcolor: 'white',
+        bgcolor: 'background.paper',
         color: 'text.primary',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        borderBottom: '1px solid #e0e0e0',
+        borderBottom: '1px solid',
+        borderBottomColor: 'divider',
         zIndex: (theme) => theme.zIndex.drawer + 1,
       }}
     >
@@ -113,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               onClick={handleProfileMenuOpen}
               color="inherit"
             >
-              <Avatar sx={{ width: 32, height: 32, bgcolor: '#4285F4' }}>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
                 {user?.username?.charAt(0).toUpperCase() || 'L'}
               </Avatar>
             </IconButton>

@@ -12,6 +12,7 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
+import { useThemeMode } from '../../contexts/ThemeContext';
 import {
   Dashboard,
   MenuBook,
@@ -43,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
+  const { isDarkMode } = useThemeMode();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleNavigation = (path: string) => {
@@ -53,19 +55,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
     }
   };
 
+  // Dynamic sidebar styling based on theme mode
+  const sidebarStyles = {
+    width: DRAWER_WIDTH,
+    height: '100%',
+    bgcolor: isDarkMode ? 'background.paper' : theme.palette.primary.main,
+    borderRight: isDarkMode ? `1px solid ${theme.palette.divider}` : 'none',
+  };
+
+  const textColor = isDarkMode ? 'text.primary' : 'white';
+  const secondaryTextColor = isDarkMode ? 'text.secondary' : 'rgba(255,255,255,0.8)';
+  const dividerColor = isDarkMode ? 'divider' : 'rgba(255,255,255,0.2)';
+  const hoverBgColor = isDarkMode ? 'action.hover' : 'rgba(255,255,255,0.1)';
+  const activeBgColor = isDarkMode ? 'action.selected' : 'rgba(255,255,255,0.15)';
+
   const drawerContent = (
-    <Box sx={{ width: DRAWER_WIDTH, height: '100%', bgcolor: '#4285F4' }}>
+    <Box sx={sidebarStyles}>
       {/* Logo/Brand Section */}
-      <Box sx={{ p: 3, color: 'white' }}>
+      <Box sx={{ p: 3, color: textColor }}>
         <Typography variant="h5" component="h1" fontWeight="bold">
           Library App
         </Typography>
-        <Typography variant="body2" sx={{ opacity: 0.8, mt: 1 }}>
+        <Typography variant="body2" sx={{ color: secondaryTextColor, mt: 1 }}>
           Management System
         </Typography>
       </Box>
 
-      <Divider sx={{ bgcolor: 'rgba(255,255,255,0.2)' }} />
+      <Divider sx={{ bgcolor: dividerColor }} />
 
       {/* Navigation Menu */}
       <List sx={{ px: 2, pt: 2 }}>
@@ -79,16 +95,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
                 onClick={() => handleNavigation(item.path)}
                 sx={{
                   borderRadius: 2,
-                  color: 'white',
-                  bgcolor: isActive ? 'rgba(255,255,255,0.15)' : 'transparent',
+                  color: textColor,
+                  bgcolor: isActive ? activeBgColor : 'transparent',
                   '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.1)',
+                    bgcolor: hoverBgColor,
                   },
                   py: 1.5,
                 }}
                 data-cy={`nav-${item.id}`}
               >
-                <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+                <ListItemIcon sx={{ color: textColor, minWidth: 40 }}>
                   <Icon />
                 </ListItemIcon>
                 <ListItemText 
@@ -109,14 +125,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
           sx={{
             display: 'flex',
             alignItems: 'center',
-            bgcolor: 'rgba(255,255,255,0.1)',
-            color: 'white',
+            bgcolor: isDarkMode ? 'action.hover' : 'rgba(255,255,255,0.1)',
+            color: textColor,
             borderRadius: 2,
             px: 2,
             py: 1,
             cursor: 'pointer',
             '&:hover': {
-              bgcolor: 'rgba(255,255,255,0.15)',
+              bgcolor: isDarkMode ? 'action.selected' : 'rgba(255,255,255,0.15)',
             },
           }}
         >

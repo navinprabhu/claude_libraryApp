@@ -11,10 +11,13 @@ import {
   IconButton,
   Checkbox,
   FormControlLabel,
+  useTheme,
 } from '@mui/material';
 import { Visibility, VisibilityOff, Person, Lock } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemeMode } from '../contexts/ThemeContext';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 export const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -27,6 +30,8 @@ export const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
+  const { isDarkMode } = useThemeMode();
 
   const from = location.state?.from?.pathname || '/';
 
@@ -61,22 +66,33 @@ export const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: '#f8f9fa',
-        background: 'linear-gradient(135deg, #4285F4 0%, #34A853 100%)',
+        bgcolor: 'background.default',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
+          : 'linear-gradient(135deg, #4285F4 0%, #34A853 100%)',
         p: 3,
+        position: 'relative',
       }}
     >
+      {/* Theme Toggle - Positioned in top right */}
+      <Box sx={{ position: 'absolute', top: 20, right: 20 }}>
+        <ThemeToggle showLabel={false} size="small" />
+      </Box>
+
       <Card 
         sx={{ 
           maxWidth: 400, 
           width: '100%',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          boxShadow: isDarkMode 
+            ? '0 8px 32px rgba(0,0,0,0.4)'
+            : '0 8px 32px rgba(0,0,0,0.1)',
+          bgcolor: 'background.paper',
         }}
       >
         <CardContent sx={{ p: 4 }}>
           {/* Logo/Brand Section */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#4285F4' }}>
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               Library App
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -167,9 +183,9 @@ export const Login: React.FC = () => {
               sx={{
                 mt: 2,
                 py: 1.5,
-                bgcolor: '#4285F4',
+                bgcolor: 'primary.main',
                 '&:hover': {
-                  bgcolor: '#3367D6',
+                  bgcolor: 'primary.dark',
                 },
               }}
               data-cy="login-button"
@@ -179,7 +195,12 @@ export const Login: React.FC = () => {
           </form>
 
           {/* Demo Credentials */}
-          <Box sx={{ mt: 4, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+          <Box sx={{ 
+            mt: 4, 
+            p: 2, 
+            bgcolor: isDarkMode ? 'action.hover' : 'grey.100',
+            borderRadius: 1 
+          }}>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
               Demo Credentials:
             </Typography>

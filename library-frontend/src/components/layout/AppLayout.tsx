@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Toolbar } from '@mui/material';
+import { Box } from '@mui/material';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -26,15 +26,18 @@ export const AppLayout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-          minHeight: '100vh',
+          p: 3,
+          ml: { 
+            xs: 0, 
+            sm: 0, 
+            md: `${DRAWER_WIDTH}px` // Push content to the right of sidebar
+          },
+          mt: 8, // Account for AppBar height (64px)
+          minHeight: 'calc(100vh - 64px)',
           bgcolor: '#f8f9fa',
         }}
       >
-        <Toolbar /> {/* Spacer for fixed header */}
-        <Box sx={{ p: 3 }}>
-          <Outlet />
-        </Box>
+        <Outlet />
       </Box>
     </Box>
   );

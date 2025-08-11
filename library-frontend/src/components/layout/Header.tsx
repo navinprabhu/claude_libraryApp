@@ -45,12 +45,21 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     <AppBar
       position="fixed"
       sx={{
-        width: { md: `calc(100% - 280px)` },
-        ml: { md: '280px' },
+        width: { 
+          xs: '100%',
+          sm: '100%', 
+          md: `calc(100% - 280px)` 
+        },
+        ml: { 
+          xs: 0,
+          sm: 0,
+          md: '280px' 
+        },
         bgcolor: 'white',
         color: 'text.primary',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         borderBottom: '1px solid #e0e0e0',
+        zIndex: (theme) => theme.zIndex.drawer + 1,
       }}
     >
       <Toolbar sx={{ justifyContent: 'space-between' }}>

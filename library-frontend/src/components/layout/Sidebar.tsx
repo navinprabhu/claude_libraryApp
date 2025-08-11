@@ -9,6 +9,8 @@ import {
   Box,
   Typography,
   Divider,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Dashboard,
@@ -18,7 +20,6 @@ import {
   Assessment,
   Settings,
   Search,
-  Notifications,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -41,10 +42,15 @@ const menuItems = [
 export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleNavigation = (path: string) => {
     navigate(path);
-    onClose();
+    // Only close sidebar on mobile devices
+    if (isMobile) {
+      onClose();
+    }
   };
 
   const drawerContent = (

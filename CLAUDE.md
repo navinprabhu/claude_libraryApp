@@ -63,6 +63,7 @@ Load: docs/context/troubleshooting-context.md
 
 **LibraryApp** - .NET 8 microservices library management system:
 - **4 Core Services**: Auth (5001), Books (5002), Members (5003), Gateway (5000)
+- **Modern React Frontend**: React 19.1.0 with Material-UI v7 and dark/light mode toggle
 - **Docker-first**: PostgreSQL databases + Redis cache
 - **JWT authentication** with role-based access (`Admin`, `Member`)
 - **Ocelot API Gateway** for routing and rate limiting
@@ -96,5 +97,29 @@ User: "Add a new endpoint to get books by author"
 → Reference: docs/recipes/add-api-endpoint.md
 → Patterns: docs/atoms/api-conventions.md
 ```
+
+## Recent Feature Additions
+
+### Dark Mode Toggle (✅ Completed)
+**Location**: `library-frontend/src/contexts/ThemeContext.tsx`, `library-frontend/src/components/common/ThemeToggle.tsx`
+
+**Implementation**: 
+- Cookie-based theme persistence (365 days)
+- Available in Settings page and Login screen
+- Material-UI theme switching with proper light/dark palettes
+- All layout components (Sidebar, Header, AppLayout) support theme switching
+
+**Usage**:
+- **Settings Page**: Navigate to Settings → Appearance → Theme toggle
+- **Login Screen**: Theme toggle in top-right corner
+- **Persistence**: User preference automatically saved and restored
+
+**Files Modified**:
+- `src/contexts/ThemeContext.tsx` - Theme management context
+- `src/components/common/ThemeToggle.tsx` - Reusable toggle component  
+- `src/App.tsx` - Updated to use CustomThemeProvider
+- `src/pages/Settings.tsx` - Enhanced with appearance section
+- `src/components/layout/*` - All layout components updated for theme awareness
+- `src/pages/Login.tsx` - Added theme toggle and dark mode support
 
 This atomic documentation structure ensures AI agents get exactly the context they need for each specific task, resulting in faster, more accurate, and more focused assistance.

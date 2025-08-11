@@ -46,15 +46,25 @@ app.UseCors("ApiGatewayPolicy");
 app.UseIpRateLimiting();
 app.UseCustomRateLimiting();
 
+// Simple health check middleware (must be before Ocelot)
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path == "/health/simple" && context.Request.Method == "GET")
+    {
+        context.Response.ContentType = "application/json";
+        var response = new { status = "healthy", timestamp = DateTime.UtcNow };
+        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response));
+        return;
+    }
+    await next();
+});
+
 // Authentication
 app.UseAuthentication();
 app.UseAuthorization();
 
 // Health checks endpoint
 app.MapHealthChecks("/health");
-
-// Simple health endpoint for Docker health checks (before complex middleware)
-app.MapGet("/health/simple", () => new { status = "healthy", timestamp = DateTime.UtcNow });
 
 app.MapControllers();
 

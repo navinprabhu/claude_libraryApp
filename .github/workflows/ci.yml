@@ -523,10 +523,16 @@ jobs:
               gateway) echo 5000 ;;
             esac)
             
-            echo "Checking $service service on port $port..."
+            # Use the correct health endpoint for each service
+            health_endpoint=$(case $service in
+              gateway) echo "/health/simple" ;;
+              *) echo "/health" ;;
+            esac)
+            
+            echo "Checking $service service on port $port using endpoint $health_endpoint..."
             healthy=false
             for i in {1..10}; do
-              if curl -f http://localhost:$port/health > /dev/null 2>&1; then
+              if curl -f http://localhost:$port$health_endpoint > /dev/null 2>&1; then
                 echo "✅ $service service is healthy"
                 healthy=true
                 break

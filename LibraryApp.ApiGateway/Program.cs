@@ -25,9 +25,12 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-// Security middleware
-app.UseHttpsRedirection();
-app.UseHsts();
+// Security middleware (disabled in Development/Docker for health checks)
+if (app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+    app.UseHsts();
+}
 
 // Custom middleware pipeline
 app.UseCorrelationId();
@@ -43,12 +46,26 @@ app.UseCors("ApiGatewayPolicy");
 app.UseIpRateLimiting();
 app.UseCustomRateLimiting();
 
+// Simple health check middleware (must be before Ocelot)
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path == "/health/simple" && context.Request.Method == "GET")
+    {
+        context.Response.ContentType = "application/json";
+        var response = new { status = "healthy", timestamp = DateTime.UtcNow };
+        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response));
+        return;
+    }
+    await next();
+});
+
 // Authentication
 app.UseAuthentication();
 app.UseAuthorization();
 
 // Health checks endpoint
 app.MapHealthChecks("/health");
+
 app.MapControllers();
 
 // Add root endpoint with API information

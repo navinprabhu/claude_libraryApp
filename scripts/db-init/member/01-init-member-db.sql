@@ -194,15 +194,25 @@ CREATE TRIGGER assign_library_card_number_trigger
     FOR EACH ROW
     EXECUTE FUNCTION assign_library_card_number();
 
--- Grant permissions to the member user
-GRANT USAGE ON SCHEMA public TO member_user;
-GRANT USAGE ON SCHEMA public TO member_dev_user;
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO member_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO member_dev_user;
-
-GRANT SELECT ON MemberStatistics TO member_user;
-GRANT SELECT ON MemberStatistics TO member_dev_user;
-
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO member_user;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO member_dev_user;
+-- Grant permissions to the member user (handle both production and dev users)
+DO $$
+BEGIN
+    -- Grant permissions to member_user (production)
+    IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'member_user') THEN
+        GRANT USAGE ON SCHEMA public TO member_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO member_user;
+        GRANT SELECT ON MemberStatistics TO member_user;
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO member_user;
+        RAISE NOTICE 'Permissions granted to member_user';
+    END IF;
+    
+    -- Grant permissions to member_dev_user (development)  
+    IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'member_dev_user') THEN
+        GRANT USAGE ON SCHEMA public TO member_dev_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO member_dev_user;
+        GRANT SELECT ON MemberStatistics TO member_dev_user;
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO member_dev_user;
+        RAISE NOTICE 'Permissions granted to member_dev_user';
+    END IF;
+END
+$$;

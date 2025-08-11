@@ -91,12 +91,23 @@ CREATE TRIGGER update_users_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Grant permissions to the auth user
-GRANT USAGE ON SCHEMA public TO auth_user;
-GRANT USAGE ON SCHEMA public TO auth_dev_user;
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO auth_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO auth_dev_user;
-
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO auth_user;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO auth_dev_user;
+-- Grant permissions to the auth user (handle both production and dev users)
+DO $$
+BEGIN
+    -- Grant permissions to auth_user (production)
+    IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'auth_user') THEN
+        GRANT USAGE ON SCHEMA public TO auth_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO auth_user;
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO auth_user;
+        RAISE NOTICE 'Permissions granted to auth_user';
+    END IF;
+    
+    -- Grant permissions to auth_dev_user (development)  
+    IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'auth_dev_user') THEN
+        GRANT USAGE ON SCHEMA public TO auth_dev_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO auth_dev_user;
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO auth_dev_user;
+        RAISE NOTICE 'Permissions granted to auth_dev_user';
+    END IF;
+END
+$$;

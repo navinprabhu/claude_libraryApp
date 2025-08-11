@@ -34,7 +34,7 @@ export const AppLayout: React.FC = () => {
           },
           mt: 8, // Account for AppBar height (64px)
           minHeight: 'calc(100vh - 64px)',
-          bgcolor: '#f8f9fa',
+          bgcolor: 'background.default',
         }}
       >
         <Outlet />

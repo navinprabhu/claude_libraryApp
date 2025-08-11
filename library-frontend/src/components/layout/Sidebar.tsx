@@ -18,7 +18,6 @@ import {
   Assessment,
   Settings,
   Search,
-  Notifications,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 

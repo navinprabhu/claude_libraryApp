@@ -53,6 +53,7 @@ A modern, cloud-native library management system built with .NET 8 microservices
 ### 🎨 **Modern React Frontend**
 - **React 19.1.0** with TypeScript and modern hooks
 - **Material-UI v7** component library with custom theming
+- **Dark/Light Mode Toggle** with cookie-based persistence across sessions
 - **React Query v5** for advanced data fetching and caching
 - **Interactive dashboards** with Recharts visualizations
 - **Global search** with autocomplete functionality  

@@ -1,5 +1,7 @@
 # LibraryApp - AI Agent Context Manager
 
+⚠️ **OPTIMIZE TOKENS**: Use `CONTEXT_MINIMAL.md` for session start (300 tokens vs 2500+)
+
 This file provides **context-aware documentation loading** for AI agents working with the LibraryApp microservices project.
 
 ## Context Loading Strategy
